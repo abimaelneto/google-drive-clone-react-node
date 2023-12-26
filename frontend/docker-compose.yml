@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  web:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.dev
+    environment:
+      - PORT=8000
+    ports:
+      - 8000:8000
+    volumes:
+      - .:/home/node/app
+
+networks:
+  default:
+    name: frontend-network
+    driver: bridge
