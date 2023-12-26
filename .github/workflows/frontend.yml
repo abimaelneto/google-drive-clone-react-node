@@ -1,10 +1,13 @@
 name: Example workflow for S3 Deploy
 on:
   push:
+    paths:
+      - frontend/**
     branches:
       - main
 jobs:
   run:
+    working-directory: ./frontend
     runs-on: ubuntu-latest
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
