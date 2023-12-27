@@ -1,0 +1,16 @@
+org: abimaneto
+app: google-drive-clone-rest-api
+service: google-drive-clone-rest-api
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: dev
+  region: us-east-1
+
+functions:
+  app:
+    handler: dist/index.handler
+    events:
+      - http: ANY /
+      - http: ANY /{proxy+}
