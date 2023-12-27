@@ -1,4 +1,4 @@
-version: "3.9"
+version: '3.9'
 services:
   web:
     build:
@@ -6,19 +6,35 @@ services:
       dockerfile: ./Dockerfile.dev
     environment:
       - PORT=3000
+      - DB_URL=postgresql://admin:admin@postgres:5432/google-drive-clone?schema=public
+      - DB_PORT=5432
+      - DB_PASS=admin
+      - DB_USER=admin
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
       - ./src:/app/src
+      - ./prisma:/app/prisma
     depends_on:
       - postgres
+    restart: always
   postgres:
-    image: "postgres:15.3-alpine"
+    volumes:
+      - db-data:/var/lib/postgressql/data
+    ports:
+      - 5432:5432
+    image: 'postgres:15.3-alpine'
     environment:
       - POSTGRES_PASSWORD=admin
       - POSTGRES_USER=admin
+      - POSTGRES_DB=google-drive-clone
+    restart: always
   pgAdmin:
-    image: "dpage/pgadmin4:latest"
+    volumes:
+      - pg-admin-data:/var/lib/pgadmin
+    ports:
+      - 5000:80
+    image: 'dpage/pgadmin4:latest'
     environment:
       - PGADMIN_DEFAULT_EMAIL=admin@admin.com
       - PGADMIN_DEFAULT_PASSWORD=admin
@@ -29,3 +45,7 @@ networks:
   default:
     name: local-network
     driver: bridge
+
+volumes:
+  db-data:
+  pg-admin-data:
