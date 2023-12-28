@@ -6,21 +6,25 @@ services:
       dockerfile: ./Dockerfile.dev
     environment:
       - PORT=3000
+      - JWT_SECRET=abimael
+      - JWT_EXPIRES_IN=2
+      - JWT_COOKIE_EXPIRES_IN=2
       - DB_URL=postgresql://admin:admin@postgres:5432/google-drive-clone?schema=public
       - DB_PORT=5432
       - DB_PASS=admin
       - DB_USER=admin
     ports:
-      - '3000:3000'
+      - 3000:3000
     volumes:
       - ./src:/app/src
       - ./prisma:/app/prisma
+      - ./@types:/app/@types
     depends_on:
       - postgres
     restart: always
   postgres:
     volumes:
-      - db-data:/var/lib/postgressql/data
+      - db-data:/var/lib/postgresql/data
     ports:
       - 5432:5432
     image: 'postgres:15.3-alpine'
@@ -31,7 +35,7 @@ services:
     restart: always
   pgAdmin:
     volumes:
-      - pg-admin-data:/var/lib/pgadmin
+      - pg-admin-data:/var/lib/pgadmin/data
     ports:
       - 5000:80
     image: 'dpage/pgadmin4:latest'
