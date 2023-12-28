@@ -4,7 +4,7 @@ export type CreateUserRequestDTO = {
   password: string
   email: string
   name: string
-  role: Role
+  role?: Role
 }
 
 export type CreateUserResponseDTO = {

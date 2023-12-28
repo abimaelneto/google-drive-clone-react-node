@@ -29,7 +29,7 @@ export class UsersController {
   get = catchAsync(async (req: Request, res: Response, next:NextFunction) => {
     const { userId } = req.params
     if(!userId) return next(new AppError('Missing required param userId', 400))
-    const user = await this.service?.get(userId)
+    const user = await this.service?.get({id:userId})
     return res.json(user)
   })
   update = catchAsync(async (req: Request, res: Response, next:NextFunction) => {
@@ -41,7 +41,7 @@ export class UsersController {
   delete = catchAsync(
     async (req: Request, res: Response, next: NextFunction) => {
       const { userId } = req.params
-      const user = this.service?.get(userId)
+      const user = this.service?.get({id:userId})
       if (!user) return next(new AppError('User not found.', 404))
       this.service?.delete(userId)
       return res.status(204)

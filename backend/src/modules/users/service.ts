@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { PrismaService } from '../../base/PrismaService'
 import { CreateUserRequestDTO } from './dtos/createUserDTO'
 import { UpdateUserRequestDTO } from './dtos/updateUserDTO'
@@ -15,9 +16,9 @@ export class UsersService {
     })
     return newUser
   }
-async get(id:string){
+async get(where:Prisma.UserWhereUniqueInput){
   const user = await PrismaService.user.findFirstOrThrow({
-    where: { id },
+    where,
   })
   return user
 }

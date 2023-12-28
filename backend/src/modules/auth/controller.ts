@@ -5,9 +5,13 @@ import jwt, { JwtPayload } from 'jsonwebtoken'
 import { PrismaService } from '../../base/PrismaService'
 import AppError from '../../utils/AppError'
 import { CreateUserResponseDTO } from '../users/dtos/createUserDTO'
+import { UsersService } from '../users/service'
 
 export class AuthController {
-  constructor() {}
+  static usersService:UsersService
+  constructor() {
+    AuthController.usersService = new UsersService()
+  }
 
   static signToken = (id: string) => {
     return jwt.sign({ id }, process.env.JWT_SECRET as string, {
@@ -45,12 +49,10 @@ export class AuthController {
   }
 
   static signup = catchAsync(async (req: Request, res: Response) => {
-    const newUser = await PrismaService.user.create({
-      data: {
+    const newUser = await AuthController.usersService.create({
         name: req.body.name,
         email: req.body.email,
         password: req.body.password,
-      },
     })
     delete (newUser as { password?: string }).password
     this.createSendToken(newUser, 201, req, res)
@@ -63,7 +65,7 @@ export class AuthController {
       if (!email || !password) {
         return next(new AppError('Please provide email and password!', 400))
       }
-      const user = await PrismaService.user.findUnique({ where: { email } })
+      const user = await AuthController.usersService.get({ email } )
       if (!user || password != user.password) {
         return next(new AppError('Incorrect email or password', 401))
       }
@@ -90,9 +92,9 @@ export class AuthController {
           )
         )
       }
-      console.log(token, process.env.JWT_SECRET)
+
       const decoded = jwt.verify(token, process.env.JWT_SECRET || '')
-      console.log({ decoded })
+      
       const currentUser = await PrismaService.user.findUniqueOrThrow({
         where: { id: (decoded as JwtPayload).id },
       })
