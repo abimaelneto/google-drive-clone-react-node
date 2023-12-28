@@ -17,9 +17,7 @@ export class GlobalErrorHandler {
     res: Response,
     next: NextFunction
   ) {
-    console.log('hey main')
     if (process.env.NODE_ENV === 'development') {
-      console.log('dev')
       return GlobalErrorHandler.sendErrorDev(
         new AppError(
           err.message,
