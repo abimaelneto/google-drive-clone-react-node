@@ -11,6 +11,7 @@ import cookieParser from 'cookie-parser'
 import 'dotenv/config'
 import { AuthRouter } from './modules/auth/router'
 import { GlobalErrorHandler } from './utils/GlobalErrorHandler'
+import { usersRouter } from './modules/users/router'
 
 const app: Express = express()
 const port = process.env.PORT
@@ -19,6 +20,7 @@ app.use(json())
 app.use(cookieParser())
 
 app.use('/api/v1/auth', AuthRouter)
+app.use('/api/v1/users', usersRouter)
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Hello World!')
