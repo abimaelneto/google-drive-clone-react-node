@@ -7,7 +7,7 @@ services:
     environment:
       - PORT=3000
       - JWT_SECRET=abimael
-      - JWT_EXPIRES_IN=2
+      - JWT_EXPIRES_IN=2d
       - JWT_COOKIE_EXPIRES_IN=2
       - DB_URL=postgresql://admin:admin@postgres:5432/google-drive-clone?schema=public
       - DB_PORT=5432
