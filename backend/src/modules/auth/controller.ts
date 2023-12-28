@@ -11,7 +11,7 @@ export class AuthController {
 
   static signToken = (id: string) => {
     return jwt.sign({ id }, process.env.JWT_SECRET as string, {
-      expiresIn: process.env.JWT_EXPIRES_IN,
+      expiresIn: process.env.JWT_EXPIRES_IN || '1d',
     })
   }
 
@@ -56,9 +56,23 @@ export class AuthController {
     this.createSendToken(newUser, 201, req, res)
   })
 
+  static login = catchAsync(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { email, password } = req.body
+
+      if (!email || !password) {
+        return next(new AppError('Please provide email and password!', 400))
+      }
+      const user = await PrismaService.user.findUnique({ where: { email } })
+      if (!user || password != user.password) {
+        return next(new AppError('Incorrect email or password', 401))
+      }
+      delete (user as { password?: string }).password
+      this.createSendToken(user, 200, req, res)
+    }
+  )
   static protect = catchAsync(
     async (req: Request, res: Response, next: NextFunction) => {
-      // 1) Getting token and check of it's there
       let token
       if (
         req.headers.authorization &&
@@ -68,7 +82,6 @@ export class AuthController {
       } else if (req.cookies.jwt) {
         token = req.cookies.jwt
       }
-
       if (!token) {
         return next(
           new AppError(
@@ -77,17 +90,11 @@ export class AuthController {
           )
         )
       }
-
-      // 2) Verification token
-
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET || ''
-      ) as JwtPayload
-
-      // 3) Check if user still exists
+      console.log(token, process.env.JWT_SECRET)
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || '')
+      console.log({ decoded })
       const currentUser = await PrismaService.user.findUniqueOrThrow({
-        where: { id: decoded.id },
+        where: { id: (decoded as JwtPayload).id },
       })
       if (!currentUser) {
         return next(
@@ -97,28 +104,19 @@ export class AuthController {
           )
         )
       }
-
-      // GRANT ACCESS TO PROTECTED ROUTE
       req.user = currentUser
       res.locals.user = currentUser
       next()
     }
   )
-  static login = catchAsync(
-    async (req: Request, res: Response, next: NextFunction) => {
-      const { email, password } = req.body
-
-      if (!email || !password) {
-        return next(new AppError('Please provide email and password!', 400))
+  static restrictTo = (...roles: string[]) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+      if (!roles.includes(req.user.role)) {
+        return next(
+          new AppError("You don't have permission to perform this action", 403)
+        )
       }
-      const user = await PrismaService.user.findUnique({ where: { email } })
-      console.log(email, password, user, user?.password)
-      if (!user || password != user.password) {
-        return next(new AppError('Incorrect email or password', 401))
-      }
-
-      // 3) If everything ok, send token to client
-      this.createSendToken(user, 200, req, res)
+      next()
     }
-  )
+  }
 }
