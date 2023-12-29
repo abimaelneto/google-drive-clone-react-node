@@ -17,9 +17,20 @@ model User {
   email String @unique
   name String?
   role Role @default(USER)
+  files FileNode[]
 }
 
 enum Role {
   USER
   ADMIN
+}
+
+model FileNode {
+  id String @id @default(uuid())
+  name String
+  owner  User @relation(fields: [ownerEmail], references: [email])
+  ownerEmail String
+  parentId String? 
+  content String?
+  isFolder Boolean @default(false)
 }
