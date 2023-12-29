@@ -10,6 +10,13 @@ async function main() {
       role: 'ADMIN',
     },
   })
+  await prisma.user.create({
+    data: {
+      password: '1234',
+      email: 'email@mail.com',
+      name: 'Common User',
+    },
+  })
   const folder1 = await prisma.fileNode.create({
     data: {
       name: 'folder1',
