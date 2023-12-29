@@ -1,10 +1,4 @@
-import express, {
-  Request,
-  Response,
-  Express,
-  json,
-  NextFunction,
-} from 'express'
+import express, { Request, Response, Express, json } from 'express'
 import serverless from 'serverless-http'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
@@ -26,13 +20,6 @@ app.use('/api/v1/files', filesRouter)
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Hello World!')
-})
-
-app.use((req: Request, res: Response, next: NextFunction) => {
-  console.log('hey there')
-  req.requestTime = new Date().toISOString()
-  // console.log(req.cookies);
-  next()
 })
 
 app.use(GlobalErrorHandler.main)
