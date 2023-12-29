@@ -5,12 +5,10 @@ import AppError from '../../utils/AppError'
 import { UsersService } from '../users/service'
 
 export class FilesController {
-  filesService: FilesService
-  usersService: UsersService
-  constructor(filesService: FilesService, usersService: UsersService) {
-    this.filesService = filesService
-    this.usersService = usersService
-  }
+  constructor(
+    private filesService: FilesService,
+    private usersService: UsersService
+  ) {}
 
   listRoot = catchAsync(async (req: Request, res: Response) => {
     const fileNodes = await this.filesService.list({
@@ -63,6 +61,56 @@ export class FilesController {
         },
       })
       return res.status(201).json(newFileNode)
+    }
+  )
+  updateFile = catchAsync(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { fileId } = req.params
+      if (!fileId) return next(new AppError('Missing fileId param.', 400))
+      const updatedFile = await this.filesService.update({
+        where: { id: fileId, isFolder: false },
+        data: req.body,
+      })
+      if (!updatedFile) return next(new AppError('File not found', 404))
+      return res.status(200).json(updatedFile)
+    }
+  )
+  updateFolder = catchAsync(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { folderId } = req.params
+      if (!folderId) return next(new AppError('Missing folderId param.', 400))
+      const updatedFolder = await this.filesService.update({
+        where: { id: folderId, isFolder: true },
+        data: req.body,
+      })
+      if (!updatedFolder) return next(new AppError('Folder not found', 404))
+      return res.status(200).json(updatedFolder)
+    }
+  )
+  deleteFile = catchAsync(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { fileId } = req.params
+      if (!fileId) return next(new AppError('Missing fileId param.', 400))
+      const updatedFile = await this.filesService.delete({
+        where: { id: fileId, isFolder: false },
+      })
+      if (!updatedFile) return next(new AppError('File not found', 404))
+      return res.status(204)
+    }
+  )
+
+  deleteFolder = catchAsync(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { folderId } = req.params
+      if (!folderId) return next(new AppError('Missing folderId param.', 400))
+      const deletedFolder = await this.filesService.delete({
+        where: { id: folderId, isFolder: true },
+      })
+      if (!deletedFolder) return next(new AppError('Folder not found', 404))
+      await this.filesService.deleteMany({
+        where: { parentId: folderId, isFolder: false },
+      })
+      return res.status(204)
     }
   )
 }
