@@ -31,6 +31,8 @@ model FileNode {
   owner  User @relation(fields: [ownerEmail], references: [email])
   ownerEmail String
   parentId String? 
+  parent FileNode? @relation("FileNodes", fields:[parentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  children FileNode[] @relation("FileNodes")
   content String?
   isFolder Boolean @default(false)
 }
