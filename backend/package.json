@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "setup": "prisma migrate dev && prisma generate",
     "dev": " nodemon",
     "debug": "ndb",
     "build": "tsc",
