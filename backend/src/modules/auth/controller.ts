@@ -1,25 +1,23 @@
 import { NextFunction, Request, Response } from 'express'
 import { catchAsync } from '../../utils/catchAsync'
 import jwt, { JwtPayload } from 'jsonwebtoken'
-
-import { PrismaService } from '../../base/PrismaService'
 import AppError from '../../utils/AppError'
 import { CreateUserResponseDTO } from '../users/dtos/createUserDTO'
-import { UsersService } from '../users/service'
+import { Prisma } from '@prisma/client'
 
 export class AuthController {
-  static usersService:UsersService
-  constructor() {
-    AuthController.usersService = new UsersService()
+  prismaUsersRepository: Prisma.UserDelegate
+  constructor(prismaUsersRepository: Prisma.UserDelegate) {
+    this.prismaUsersRepository = prismaUsersRepository
   }
 
-  static signToken = (id: string) => {
+  signToken = (id: string) => {
     return jwt.sign({ id }, process.env.JWT_SECRET as string, {
       expiresIn: process.env.JWT_EXPIRES_IN || '1d',
     })
   }
 
-  static createSendToken = (
+  createSendToken = (
     user: CreateUserResponseDTO,
     statusCode: number,
     req: Request,
@@ -48,24 +46,28 @@ export class AuthController {
     })
   }
 
-  static signup = catchAsync(async (req: Request, res: Response) => {
-    const newUser = await AuthController.usersService.create({
+  signup = catchAsync(async (req: Request, res: Response) => {
+    const newUser = await this.prismaUsersRepository.create({
+      data: {
         name: req.body.name,
         email: req.body.email,
         password: req.body.password,
+      },
     })
     delete (newUser as { password?: string }).password
     this.createSendToken(newUser, 201, req, res)
   })
 
-  static login = catchAsync(
+  login = catchAsync(
     async (req: Request, res: Response, next: NextFunction) => {
       const { email, password } = req.body
 
       if (!email || !password) {
         return next(new AppError('Please provide email and password!', 400))
       }
-      const user = await AuthController.usersService.get({ email } )
+      const user = await this.prismaUsersRepository.findFirst({
+        where: { email },
+      })
       if (!user || password != user.password) {
         return next(new AppError('Incorrect email or password', 401))
       }
@@ -73,7 +75,7 @@ export class AuthController {
       this.createSendToken(user, 200, req, res)
     }
   )
-  static protect = catchAsync(
+  protect = catchAsync(
     async (req: Request, res: Response, next: NextFunction) => {
       let token
       if (
@@ -94,8 +96,8 @@ export class AuthController {
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET || '')
-      
-      const currentUser = await PrismaService.user.findUniqueOrThrow({
+
+      const currentUser = await this.prismaUsersRepository.findUniqueOrThrow({
         where: { id: (decoded as JwtPayload).id },
       })
       if (!currentUser) {
@@ -111,10 +113,11 @@ export class AuthController {
       next()
     }
   )
-  static restrictTo = (...roles: string[]) => {
+  restrictTo = (...roles: string[]) => {
     return (req: Request, res: Response, next: NextFunction) => {
       if (!roles.includes(req.user.role)) {
         return next(
+          //eslint-disable-next-line quotes
           new AppError("You don't have permission to perform this action", 403)
         )
       }

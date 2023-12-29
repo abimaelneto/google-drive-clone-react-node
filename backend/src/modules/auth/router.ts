@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { AuthController } from './controller'
+import { PrismaService } from '../../base/PrismaService'
 
 export const AuthRouter = Router()
-
-AuthRouter.post('/signup', AuthController.signup)
-AuthRouter.post('/login', AuthController.login)
+const authController = new AuthController(PrismaService.user)
+AuthRouter.post('/signup', authController.signup)
+AuthRouter.post('/login', authController.login)
