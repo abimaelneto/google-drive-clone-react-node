@@ -14,9 +14,18 @@ const filesController = new FilesController(
   new UsersService()
 )
 
-filesRouter.get('/', filesController.listRoot)
-filesRouter.get('/folders/:folderId/', filesController.getFolder)
-filesRouter.post('/', filesController.create)
-// filesRouter.get('/:userId', filesController.get)
-// filesRouter.patch('/:userId', filesController.update)
-// filesRouter.delete('/:userId', filesController.delete)
+filesRouter
+  .route('/')
+  .get(filesController.listRoot)
+  .post(filesController.create)
+// filesRouter.get('/:fileId', filesController.get)
+filesRouter
+  .route('/:fileId')
+  .patch(filesController.updateFile)
+  .delete(filesController.deleteFile)
+
+filesRouter
+  .route('/folders/:folderId/')
+  .get(filesController.getFolder)
+  .patch(filesController.updateFolder)
+  .delete(filesController.deleteFolder)
