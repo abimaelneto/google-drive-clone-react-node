@@ -46,4 +46,11 @@ model Permission {
   user User @relation(fields:[userEmail], references: [email], onDelete: Cascade, onUpdate: Cascade)
   userEmail String
   recursive Boolean @default(false)
+  actions Action[] 
+}
+
+enum Action {
+  READ
+  WRITE
+  DELETE
 }
