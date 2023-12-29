@@ -17,9 +17,22 @@ model User {
   email String @unique
   name String?
   role Role @default(USER)
+  files FileNode[]
 }
 
 enum Role {
   USER
   ADMIN
+}
+
+model FileNode {
+  id String @id @default(uuid())
+  name String
+  owner  User @relation(fields: [ownerEmail], references: [email])
+  ownerEmail String
+  parentId String? 
+  parent FileNode? @relation("FileNodes", fields:[parentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  children FileNode[] @relation("FileNodes")
+  content String?
+  isFolder Boolean @default(false)
 }
