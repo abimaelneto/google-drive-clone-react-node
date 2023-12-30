@@ -3,7 +3,7 @@ import { FilesController } from './controller'
 import { FilesService } from './service'
 import { AuthController } from '../auth/controller'
 import { PrismaService } from '../../base/PrismaService'
-import { UsersService } from '../users/service'
+import { PermissionsService } from '../permissions/service'
 
 export const filesRouter = Router()
 const authController = new AuthController(PrismaService.user)
@@ -11,7 +11,7 @@ filesRouter.use(authController.protect)
 
 const filesController = new FilesController(
   new FilesService(PrismaService.fileNode),
-  new UsersService()
+  new PermissionsService(PrismaService.permission)
 )
 
 filesRouter.route('/').get(filesController.list).post(filesController.create)
