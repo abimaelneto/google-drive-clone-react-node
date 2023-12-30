@@ -2,6 +2,8 @@ import { PropsWithChildren, useEffect } from 'react'
 import './global.css'
 import { ThemeProvider } from '@mui/material'
 import { theme } from './theme'
+import { Provider } from 'react-redux'
+import { store } from './store'
 
 function App({ children }: PropsWithChildren) {
   const test = async () => {
@@ -11,7 +13,11 @@ function App({ children }: PropsWithChildren) {
   useEffect(() => {
     test()
   })
-  return <ThemeProvider theme={theme}>{children}</ThemeProvider>
+  return (
+    <Provider store={store}>
+      <ThemeProvider theme={theme}>{children}</ThemeProvider>
+    </Provider>
+  )
 }
 
 export default App
