@@ -40,13 +40,13 @@ model FileNode {
 }
 
 model Permission {
-  id String @id @default(uuid())
   fileNode FileNode @relation(fields:[fileNodeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   fileNodeId String
   user User @relation(fields:[userEmail], references: [email], onDelete: Cascade, onUpdate: Cascade)
   userEmail String
   recursive Boolean @default(false)
   actions Action[] 
+  @@id([fileNodeId, userEmail])
 }
 
 enum Action {
