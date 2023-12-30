@@ -8,10 +8,20 @@ export class PermissionsService {
       where: { userEmail: email },
     })
   }
-  async create() {
-    // return await this.prismaPermissionsRepository.create()
+  async create(nodeId: string, userEmail: string, actions: Action[]) {
+    return await this.prismaPermissionsRepository.create({
+      data: {
+        fileNode: { connect: { id: nodeId } },
+        user: { connect: { email: userEmail } },
+        actions,
+      },
+    })
   }
-  async get(nodeId: string, userEmail: string, action: Action) {
+  async getPermissionsForNode(
+    nodeId: string,
+    userEmail: string,
+    action: Action
+  ) {
     const results = await PrismaService.$queryRawUnsafe<Permission[]>(
       `WITH RECURSIVE getPermission AS (
       SELECT
