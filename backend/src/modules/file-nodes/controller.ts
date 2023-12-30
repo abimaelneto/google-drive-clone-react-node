@@ -40,7 +40,6 @@ export class FilesController {
         req.user.email,
         'READ'
       )
-      console.log(permissions)
       if (!permissions.length)
         return next(
           //eslint-disable-next-line quotes
