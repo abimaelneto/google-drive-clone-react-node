@@ -35,7 +35,7 @@ export class FilesController {
   get = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const { nodeId } = req.params
     if (req.user.role != 'ADMIN') {
-      const permissions = await this.permissionsService.get(
+      const permissions = await this.permissionsService.getPermissionsForNode(
         nodeId,
         req.user.email,
         'READ'
@@ -78,7 +78,7 @@ export class FilesController {
       const { parentId, ...rest } = req.body
 
       if (req.user.role != 'ADMIN') {
-        const permissions = await this.permissionsService.get(
+        const permissions = await this.permissionsService.getPermissionsForNode(
           parentId,
           req.user.email,
           'WRITE'
@@ -122,11 +122,12 @@ export class FilesController {
       if (!nodeId) return next(new AppError('Missing nodeId param.', 400))
 
       if (req.user.role != 'ADMIN') {
-        const childPermissions = await this.permissionsService.get(
-          nodeId,
-          req.user.email,
-          'WRITE'
-        )
+        const childPermissions =
+          await this.permissionsService.getPermissionsForNode(
+            nodeId,
+            req.user.email,
+            'WRITE'
+          )
         if (!childPermissions.length)
           return next(
             //eslint-disable-next-line quotes
@@ -136,11 +137,12 @@ export class FilesController {
             )
           )
         if (parentId) {
-          const parentPermissions = await this.permissionsService.get(
-            parentId,
-            req.user.email,
-            'WRITE'
-          )
+          const parentPermissions =
+            await this.permissionsService.getPermissionsForNode(
+              parentId,
+              req.user.email,
+              'WRITE'
+            )
           if (!parentPermissions.length)
             return next(
               //eslint-disable-next-line quotes
@@ -177,7 +179,7 @@ export class FilesController {
       if (!nodeId) return next(new AppError('Missing nodeId param.', 400))
 
       if (req.user.role != 'ADMIN') {
-        const permissions = await this.permissionsService.get(
+        const permissions = await this.permissionsService.getPermissionsForNode(
           nodeId,
           req.user.email,
           'DELETE'
