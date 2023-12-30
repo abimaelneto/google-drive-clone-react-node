@@ -8,6 +8,13 @@ export class PermissionsService {
       where: { userEmail: email },
     })
   }
+
+  async get(nodeId: string, userEmail: string) {
+    return await this.prismaPermissionsRepository.findUniqueOrThrow({
+      where: { fileNodeId_userEmail: { fileNodeId: nodeId, userEmail } },
+    })
+  }
+
   async create(nodeId: string, userEmail: string, actions: Action[]) {
     return await this.prismaPermissionsRepository.create({
       data: {
@@ -15,6 +22,15 @@ export class PermissionsService {
         user: { connect: { email: userEmail } },
         actions,
       },
+    })
+  }
+
+  async update(nodeId: string, userEmail: string, actions: Action[]) {
+    return await this.prismaPermissionsRepository.update({
+      data: {
+        actions,
+      },
+      where: { fileNodeId_userEmail: { fileNodeId: nodeId, userEmail } },
     })
   }
   async getPermissionsForNode(
@@ -25,52 +41,51 @@ export class PermissionsService {
     const results = await PrismaService.$queryRawUnsafe<Permission[]>(
       `WITH RECURSIVE getPermission AS (
       SELECT
-      p.id,
-      f.id as "fileId",
-      f."ownerEmail",
-      f."parentId",
-      p."userEmail",
-      p.recursive,
-      p."fileNodeId",
-      p."actions"
-    from
-      public."FileNode" as f
-    left join
-        public."Permission" as p
-      on 
-        f.id = p."fileNodeId"
-      WHERE f.id=$1
-      UNION
-      SELECT
-        p.id,
-        f.id as "fileId",
+        f.id,
         f."ownerEmail",
         f."parentId",
         p."userEmail",
         p.recursive,
         p."fileNodeId",
         p."actions"
-      
       FROM
         public."FileNode" as f
-      left join
+      LEFT JOIN
         public."Permission" as p
-      on 
+      ON 
+        f.id = p."fileNodeId"
+      WHERE
+        f.id=$1
+      UNION
+      SELECT
+        f.id,
+        f."ownerEmail",
+        f."parentId",
+        p."userEmail",
+        p.recursive,
+        p."fileNodeId",
+        p."actions"
+      FROM
+        public."FileNode" as f
+      LEFT JOIN
+        public."Permission" as p
+      ON 
         f.id = p."fileNodeId"
       INNER JOIN
         getPermission as gp
       ON
         gp."parentId" = f.id
-  ) SELECT
-    *
-  FROM
-    getPermission where
-      ("fileId"=$1 AND "ownerEmail"=$2)
-      OR
-        ("fileNodeId"=$1 AND "userEmail"=$2 AND array_position(actions::text[], $3)::bool)
-      OR
-        (recursive='true' AND "userEmail"=$2 AND array_position(actions::text[], $3)::bool)
-    `,
+      ) SELECT
+        *
+      FROM
+        getPermission
+      WHERE
+        ("id"=$1 AND "ownerEmail"=$2)
+        OR
+          ("fileNodeId"=$1 AND "userEmail"=$2 AND array_position(actions::text[], $3)::bool)
+        OR
+          (recursive='true' AND "userEmail"=$2 AND array_position(actions::text[], $3)::bool)
+      `,
       nodeId,
       userEmail,
       action
