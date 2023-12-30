@@ -6,7 +6,7 @@ import 'dotenv/config'
 import { AuthRouter } from './modules/auth/router'
 import { GlobalErrorHandler } from './utils/GlobalErrorHandler'
 import { usersRouter } from './modules/users/router'
-import { filesRouter } from './modules/files/router'
+import { filesRouter } from './modules/file-nodes/router'
 
 const app: Express = express()
 const port = process.env.PORT
