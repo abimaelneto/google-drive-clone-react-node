@@ -15,13 +15,19 @@ export class PermissionsService {
     })
   }
 
-  async create(nodeId: string, userEmail: string, actions: Action[]) {
-    return await this.prismaPermissionsRepository.create({
-      data: {
-        fileNode: { connect: { id: nodeId } },
-        user: { connect: { email: userEmail } },
+  async upsert(
+    nodeId: string,
+    userEmail: string,
+    actions: Action[],
+    recursive: boolean
+  ) {
+    return await this.prismaPermissionsRepository.upsert({
+      create: { fileNodeId: nodeId, userEmail, actions, recursive },
+      update: {
         actions,
+        recursive,
       },
+      where: { fileNodeId_userEmail: { fileNodeId: nodeId, userEmail } },
     })
   }
 

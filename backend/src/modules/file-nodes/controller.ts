@@ -6,11 +6,13 @@ import { UsersService } from '../users/service'
 import { Prisma } from '@prisma/client'
 import { PermissionsService } from '../permissions/service'
 import { PrismaService } from '../../base/PrismaService'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 
 export class FilesController {
   constructor(
     private filesService: FilesService,
-    private permissionsService: PermissionsService
+    private permissionsService: PermissionsService,
+    private usersService: UsersService
   ) {}
 
   list = catchAsync(async (req: Request, res: Response) => {
@@ -204,6 +206,45 @@ export class FilesController {
           return next(new AppError('Node not found', 404))
         }
         return next(new AppError('Something went wrong', 500))
+      }
+    }
+  )
+
+  share = catchAsync(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { nodeId } = req.params
+      const { email, actions, recursive } = req.body
+      try {
+        if (req.user.role != 'ADMIN') {
+          const file = await this.filesService.get({
+            where: { id: nodeId },
+          })
+
+          if (file.ownerEmail != req.user.email)
+            return next(
+              //eslint-disable-next-line quotes
+              new AppError(
+                "You don't have permission to perform this action",
+                403
+              )
+            )
+        }
+
+        const user = await this.usersService.get({ email })
+        if (!user)
+          return next(
+            //eslint-disable-next-line quotes
+            new AppError('User with provided email not found', 404)
+          )
+        const permission = await this.permissionsService.upsert(
+          nodeId,
+          email,
+          actions,
+          recursive
+        )
+        return res.status(200).json(permission)
+      } catch (err: any) {
+        return next(new AppError(err.message, 500))
       }
     }
   )
