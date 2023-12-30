@@ -17,7 +17,7 @@ export class UsersService {
     return newUser
   }
   async get(where: Prisma.UserWhereUniqueInput) {
-    const user = await PrismaService.user.findFirstOrThrow({
+    const user = await PrismaService.user.findUnique({
       where,
     })
     return user
