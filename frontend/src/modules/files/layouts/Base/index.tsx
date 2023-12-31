@@ -13,25 +13,38 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
-import { useLocation, Link, useNavigate } from 'react-router-dom'
+import { useLocation, Link, useNavigate, useParams } from 'react-router-dom'
 import FolderIcon from '@mui/icons-material/Folder'
 import FileIcon from '@mui/icons-material/Description'
 import EyeIcon from '@mui/icons-material/Visibility'
 import MenuDotsIcon from '@mui/icons-material/MoreVert'
+import EditIcon from '@mui/icons-material/Edit'
 
 import CloseIcon from '@mui/icons-material/Close'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { detailFileNodesThunk } from '../../store/thunks/detail'
+import { EditDialog } from '../../components/EditDialog'
+import { startEditingNodeFilesThunk } from '../../store/thunks/startEdit'
+import { FileNode } from '../../types/fileNode'
+import { editFileNodesThunk } from '../../store/thunks/edit'
+import { getFileNodesThunk } from '../../store/thunks/get'
+import { listFileNodesThunk } from '../../store/thunks/list'
 
-export const BaseLayout = () => {
+export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+  const params = useParams()
   const location = useLocation()
-  const { nodes, selectedNode, detailNode } = useAppSelector((s) => s.fileNodes)
+  const { nodes, selectedNode, detailNode, nodeToBeEdited } = useAppSelector(
+    (s) => s.fileNodes
+  )
   const [isFileOpen, setIsFileOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false)
+  }
   const [selectedNodeForActions, setSelectedNodeForActions] = useState<
     string | null
   >(null)
@@ -46,9 +59,50 @@ export const BaseLayout = () => {
 
     setMenuAnchor(target as HTMLElement)
   }
+
+  const openEditDialog = async (nodeId: string) => {
+    try {
+      await dispatch(startEditingNodeFilesThunk(nodeId)).unwrap()
+      setIsEditDialogOpen(true)
+    } catch (err) {
+      console.log(err)
+    }
+  }
+
+  const handleEditNode = async ({ name, content }: Partial<FileNode>) => {
+    try {
+      await dispatch(
+        editFileNodesThunk({
+          id: nodeToBeEdited?.id as string,
+          payload: { name, content },
+        })
+      ).unwrap()
+      fetchFileNodes()
+      if (nodeToBeEdited != null && detailNode?.id == nodeToBeEdited?.id)
+        dispatch(detailFileNodesThunk(nodeToBeEdited?.id))
+      setIsEditDialogOpen(false)
+    } catch (err) {
+      console.log(err)
+    }
+  }
   const nodeList =
     (location.pathname.includes('folders') ? selectedNode?.children : nodes) ||
     []
+
+  const fetchFileNodes = async () => {
+    try {
+      if (type == 'list') {
+        await dispatch(listFileNodesThunk()).unwrap()
+      } else {
+        await dispatch(getFileNodesThunk(params?.fileNodeId as string)).unwrap()
+      }
+    } catch (err) {
+      console.log(err)
+    }
+  }
+  useEffect(() => {
+    fetchFileNodes()
+  }, [])
   return (
     <Grid container>
       <Grid item sm={2}>
@@ -86,6 +140,21 @@ export const BaseLayout = () => {
                     <ListItemText sx={{ flexGrow: 1 }}>
                       {node.name}
                     </ListItemText>
+                    <ListItemIcon>
+                      <IconButton
+                        onClick={(e: { stopPropagation: () => void }) => {
+                          openEditDialog(node.id)
+                          e.stopPropagation()
+                        }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <EditDialog
+                        open={isEditDialogOpen}
+                        handleClose={handleCloseEditDialog}
+                        handleSubmit={handleEditNode}
+                      />
+                    </ListItemIcon>
                     <ListItemIcon>
                       <IconButton
                         onClick={(e) => {
