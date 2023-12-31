@@ -8,6 +8,8 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Menu,
+  MenuItem,
   Stack,
   Typography,
 } from '@mui/material'
@@ -15,6 +17,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom'
 import FolderIcon from '@mui/icons-material/Folder'
 import FileIcon from '@mui/icons-material/Description'
 import EyeIcon from '@mui/icons-material/Visibility'
+import MenuDotsIcon from '@mui/icons-material/MoreVert'
 
 import CloseIcon from '@mui/icons-material/Close'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
@@ -27,11 +30,22 @@ export const BaseLayout = () => {
   const location = useLocation()
   const { nodes, selectedNode, detailNode } = useAppSelector((s) => s.fileNodes)
   const [isFileOpen, setIsFileOpen] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  const [selectedNodeForActions, setSelectedNodeForActions] = useState<
+    string | null
+  >(null)
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
   const openFile = (nodeId: string) => {
     setIsFileOpen(true)
     dispatch(detailFileNodesThunk(nodeId))
   }
+  const openMenu = (target: EventTarget, nodeId: string) => {
+    setSelectedNodeForActions(nodeId)
+    setIsMenuOpen(true)
 
+    setMenuAnchor(target as HTMLElement)
+  }
   const nodeList =
     (location.pathname.includes('folders') ? selectedNode?.children : nodes) ||
     []
@@ -56,37 +70,66 @@ export const BaseLayout = () => {
             Back
           </Button>
           <List>
-            <>
-              {nodeList?.length > 0 &&
-                nodeList.map((node) => (
-                  <ListItem
-                    onClick={() =>
-                      node.isFolder
-                        ? navigate('/folders/' + node.id)
-                        : openFile(node.id)
-                    }
-                  >
-                    <ListItemButton>
-                      <ListItemIcon>
-                        {node.isFolder ? <FolderIcon /> : <FileIcon />}
-                      </ListItemIcon>
-                      <ListItemText sx={{ flexGrow: 1 }}>
-                        {node.name}
-                      </ListItemText>
-                      <ListItemIcon>
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openFile(node.id)
+            {nodeList?.length > 0 &&
+              nodeList.map((node) => (
+                <ListItem
+                  onClick={() =>
+                    node.isFolder
+                      ? navigate('/folders/' + node.id)
+                      : openFile(node.id)
+                  }
+                >
+                  <ListItemButton>
+                    <ListItemIcon>
+                      {node.isFolder ? <FolderIcon /> : <FileIcon />}
+                    </ListItemIcon>
+                    <ListItemText sx={{ flexGrow: 1 }}>
+                      {node.name}
+                    </ListItemText>
+                    <ListItemIcon>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openMenu(e.target, node.id)
+                        }}
+                      >
+                        <MenuDotsIcon />
+
+                        <Menu
+                          onClose={() => {
+                            setIsMenuOpen(false)
+                            setMenuAnchor(null)
                           }}
+                          anchorEl={menuAnchor}
+                          open={isMenuOpen}
+                          transformOrigin={{
+                            horizontal: 'right',
+                            vertical: 'top',
+                          }}
+                          anchorOrigin={{
+                            horizontal: 'right',
+                            vertical: 'bottom',
+                          }}
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <EyeIcon />
-                        </IconButton>
-                      </ListItemIcon>
-                    </ListItemButton>
-                  </ListItem>
-                ))}
-            </>
+                          <MenuItem>teste</MenuItem>
+                          <MenuItem>teste 2</MenuItem>
+                        </Menu>
+                      </IconButton>
+                    </ListItemIcon>
+                    <ListItemIcon>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openFile(node.id)
+                        }}
+                      >
+                        <EyeIcon />
+                      </IconButton>
+                    </ListItemIcon>
+                  </ListItemButton>
+                </ListItem>
+              ))}
           </List>
         </Stack>
       </Grid>
@@ -95,7 +138,9 @@ export const BaseLayout = () => {
           <Stack sx={{ width: '100%' }} spacing={2}>
             <Stack direction="row" justifyContent="space-between">
               <Typography variant="h6">Detail</Typography>
-              <CloseIcon onClick={() => setIsFileOpen(false)} />
+              <IconButton onClick={() => setIsFileOpen(false)}>
+                <CloseIcon />
+              </IconButton>
             </Stack>
             <FormLabel>Name</FormLabel>
             <Typography>{detailNode?.name}</Typography>
