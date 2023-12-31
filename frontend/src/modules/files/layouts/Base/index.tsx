@@ -51,7 +51,6 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const handleCloseEditDialog = () => {
     setIsEditDialogOpen(false)
   }
-
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
   const openFile = async (nodeId: string) => {
     try {
@@ -168,6 +167,21 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
                       {node.name}
                     </ListItemText>
 
+                    <ListItemIcon>
+                      <IconButton
+                        onClick={(e: { stopPropagation: () => void }) => {
+                          openEditDialog(node.id)
+                          e.stopPropagation()
+                        }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <EditDialog
+                        open={isEditDialogOpen}
+                        handleClose={handleCloseEditDialog}
+                        handleSubmit={handleEditNode}
+                      />
+                    </ListItemIcon>
                     <ListItemIcon>
                       <IconButton
                         onClick={(e) => {
