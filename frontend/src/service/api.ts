@@ -8,7 +8,7 @@ const createBaseApi = () =>
 export class API {
   private static _public: AxiosInstance
   private static _private: AxiosInstance
-  private static token: string
+  static token: string
 
   public static get public() {
     if (!API._public) {
@@ -21,7 +21,8 @@ export class API {
     if (!API._private) {
       API._private = createBaseApi()
       API._private.interceptors.request.use(async (config) => {
-        config.headers.Authorization = API.token
+        console.log(API.token)
+        config.headers.Authorization = `Bearer ${API.token}`
         return config
       })
     }
@@ -29,5 +30,6 @@ export class API {
   }
   static setupPrivateApi(token: string) {
     API.token = token
+    console.log(token)
   }
 }
