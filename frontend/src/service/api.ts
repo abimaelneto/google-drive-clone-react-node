@@ -1,14 +1,16 @@
-import axios, { AxiosInstance } from 'axios'
+import axios, { AxiosInstance, AxiosError } from 'axios'
 
 const createBaseApi = () =>
   axios.create({
     baseURL: import.meta.env.VITE_API_URL,
+    withCredentials: true,
   })
 
 export class API {
   private static _public: AxiosInstance
   private static _private: AxiosInstance
   static token: string
+  static cookies: string
 
   public static get public() {
     if (!API._public) {
@@ -20,16 +22,20 @@ export class API {
   public static get private() {
     if (!API._private) {
       API._private = createBaseApi()
-      API._private.interceptors.request.use(async (config) => {
-        console.log(API.token)
-        config.headers.Authorization = `Bearer ${API.token}`
-        return config
-      })
+      API._private.interceptors.response.use(
+        (r) => r,
+        (err: AxiosError) => {
+          if (err.response?.status == 401) {
+            return (window.location.href = '/login')
+          }
+          return err
+        }
+      )
     }
     return API._private
   }
-  static setupPrivateApi(token: string) {
-    API.token = token
-    console.log(token)
+  static setupPrivateApi(token?: string, cookies?: string) {
+    if (token) API.token = token
+    if (cookies) API.cookies = cookies
   }
 }
