@@ -10,7 +10,12 @@ import { filesRouter } from './modules/file-nodes/router'
 
 const app: Express = express()
 const port = process.env.PORT
-app.use(cors())
+app.use(
+  cors({
+    credentials: true,
+    origin: 'http://localhost:8000',
+  })
+)
 app.use(json())
 app.use(cookieParser())
 
