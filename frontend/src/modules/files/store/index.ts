@@ -37,10 +37,11 @@ export const fileNodesSlice = createSlice({
     )
     builder.addCase(
       getFileNodesThunk.fulfilled,
-      (state, action: PayloadAction<FileNode>) => {
-        state.selectedNode = action.payload
+      (state, action: PayloadAction<FileNode | undefined>) => {
+        if (action.payload) state.selectedNode = action.payload
       }
     )
+
     builder.addCase(detailFileNodesThunk.pending, (state) => {
       state.detailNode = null
     })

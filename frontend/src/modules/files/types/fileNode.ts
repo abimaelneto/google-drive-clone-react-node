@@ -9,4 +9,5 @@ export type FileNode = {
   content?: string
   children?: FileNode[]
   parentId: string
+  permissions: ('READ' | 'WRITE' | 'DELETE')[]
 }

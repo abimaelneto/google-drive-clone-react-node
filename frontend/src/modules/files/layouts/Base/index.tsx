@@ -49,9 +49,17 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     string | null
   >(null)
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
-  const openFile = (nodeId: string) => {
-    setIsFileOpen(true)
-    dispatch(detailFileNodesThunk(nodeId))
+  const openFile = async (nodeId: string) => {
+    try {
+      await dispatch(detailFileNodesThunk(nodeId)).unwrap()
+
+      if (detailNode && !detailNode.permissions.includes('READ'))
+        throw new Error('Unauthorized')
+      setIsFileOpen(true)
+      dispatch(detailFileNodesThunk(nodeId))
+    } catch (err) {
+      alert("You don't have the permissions to perform this action")
+    }
   }
   const openMenu = (target: EventTarget, nodeId: string) => {
     setSelectedNodeForActions(nodeId)
@@ -62,10 +70,14 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
 
   const openEditDialog = async (nodeId: string) => {
     try {
+      await dispatch(detailFileNodesThunk(nodeId)).unwrap()
+
+      if (detailNode && !detailNode.permissions.includes('WRITE'))
+        throw new Error('Unauthorized')
       await dispatch(startEditingNodeFilesThunk(nodeId)).unwrap()
       setIsEditDialogOpen(true)
     } catch (err) {
-      console.log(err)
+      alert("You don't have the permissions to perform this action")
     }
   }
 
@@ -88,7 +100,15 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const nodeList =
     (location.pathname.includes('folders') ? selectedNode?.children : nodes) ||
     []
-
+  const handleNavigate = async (node: FileNode) => {
+    try {
+      await dispatch(getFileNodesThunk(node.id)).unwrap()
+      node.isFolder ? navigate('/folders/' + node.id) : openFile(node.id)
+    } catch (err) {
+      if (err == 'Unauthorized')
+        alert("You don't have the permissions to perform this action")
+    }
+  }
   const fetchFileNodes = async () => {
     try {
       if (type == 'list') {
@@ -100,9 +120,19 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       console.log(err)
     }
   }
+  const handleGoToParent = async () => {
+    try {
+      if (selectedNode != null) {
+        await dispatch(getFileNodesThunk(selectedNode.parentId)).unwrap()
+        navigate('/folders/' + selectedNode.parentId)
+      }
+    } catch (err) {
+      navigate('/dashboard')
+    }
+  }
   useEffect(() => {
     fetchFileNodes()
-  }, [])
+  }, [params.fileNodeId])
   return (
     <Grid container>
       <Grid item sm={2}>
@@ -112,27 +142,14 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       </Grid>
       <Grid item sm={6}>
         <Stack>
-          <Button
-            onClick={() =>
-              navigate(
-                selectedNode?.parentId
-                  ? '/folders/' + selectedNode.parentId
-                  : '/dashboard'
-              )
-            }
-          >
-            Back
-          </Button>
+          <Typography>
+            {selectedNode?.name || 'My Drive'} {selectedNode?.parentId}
+          </Typography>
+          <Button onClick={handleGoToParent}>Back</Button>
           <List>
             {nodeList?.length > 0 &&
               nodeList.map((node) => (
-                <ListItem
-                  onClick={() =>
-                    node.isFolder
-                      ? navigate('/folders/' + node.id)
-                      : openFile(node.id)
-                  }
-                >
+                <ListItem onClick={() => handleNavigate(node)}>
                   <ListItemButton>
                     <ListItemIcon>
                       {node.isFolder ? <FolderIcon /> : <FileIcon />}
@@ -140,21 +157,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
                     <ListItemText sx={{ flexGrow: 1 }}>
                       {node.name}
                     </ListItemText>
-                    <ListItemIcon>
-                      <IconButton
-                        onClick={(e: { stopPropagation: () => void }) => {
-                          openEditDialog(node.id)
-                          e.stopPropagation()
-                        }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <EditDialog
-                        open={isEditDialogOpen}
-                        handleClose={handleCloseEditDialog}
-                        handleSubmit={handleEditNode}
-                      />
-                    </ListItemIcon>
+
                     <ListItemIcon>
                       <IconButton
                         onClick={(e) => {
@@ -203,10 +206,24 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
         </Stack>
       </Grid>
       <Grid item sm={4} p={2}>
-        {isFileOpen && (
+        {isFileOpen && detailNode != null && (
           <Stack sx={{ width: '100%' }} spacing={2}>
             <Stack direction="row" justifyContent="space-between">
               <Typography variant="h6">Detail</Typography>
+
+              <IconButton
+                onClick={(e: { stopPropagation: () => void }) => {
+                  openEditDialog(detailNode.id)
+                  e.stopPropagation()
+                }}
+              >
+                <EditIcon />
+              </IconButton>
+              <EditDialog
+                open={isEditDialogOpen}
+                handleClose={handleCloseEditDialog}
+                handleSubmit={handleEditNode}
+              />
               <IconButton onClick={() => setIsFileOpen(false)}>
                 <CloseIcon />
               </IconButton>
