@@ -1,7 +1,8 @@
 import { createBrowserRouter } from 'react-router-dom'
-import { Login } from '../views/Login'
-import { AuthLayout } from '../layouts/Auth'
-import { SignUp } from '../views/SignUp'
+import { Login } from '@/modules/auth/views/Login'
+import { AuthLayout } from '@/modules/auth/layouts/Auth'
+import { SignUp } from '@/modules/auth/views/SignUp'
+import { filesRoutes } from '@/modules/files/routes'
 
 export const router = createBrowserRouter([
   {
@@ -20,4 +21,5 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  ...filesRoutes,
 ])
