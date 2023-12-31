@@ -25,8 +25,6 @@ export const authSlice = createSlice({
         ) => {
           state.user = action.payload.data.user
           state.token = action.payload.token
-
-          API.setupPrivateApi(action.payload.token)
         }
       )
       .addCase(loginThunk.rejected, (state) => {
