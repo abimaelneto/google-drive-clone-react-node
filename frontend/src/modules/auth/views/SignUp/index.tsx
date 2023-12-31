@@ -1,10 +1,23 @@
 import { Button, TextField } from '@mui/material'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { AuthView } from '../../components/AuthView'
+import { signUpThunk } from '@/modules/auth/store/thunks/signUp'
+import { useAppDispatch } from '@/store/hooks'
+import { useState } from 'react'
 
 export const SignUp = () => {
-  const handleSubmit = () => {
-    console.log('submit')
+  const [data, setData] = useState({ email: '', name: '', password: '' })
+  const dispatch = useAppDispatch()
+  const navigate = useNavigate()
+  const handleSubmit = async () => {
+    try {
+      await dispatch(signUpThunk(data)).unwrap()
+      setData({ email: '', password: '', name: '' })
+      navigate('/login')
+    } catch (err) {
+      console.log(err)
+      alert('Something went wrong')
+    }
   }
   return (
     <AuthView
