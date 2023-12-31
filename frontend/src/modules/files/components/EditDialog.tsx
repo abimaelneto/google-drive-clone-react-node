@@ -33,7 +33,12 @@ export const EditDialog = ({
     if (nodeToBeEdited != null) setData(nodeToBeEdited)
   }, [nodeToBeEdited])
   return (
-    <Dialog open={open} onClose={handleClose} sx={{ p: 2 }}>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      sx={{ p: 2 }}
+      onClick={(e) => e.stopPropagation()}
+    >
       <DialogTitle>Editing {nodeToBeEdited?.name}</DialogTitle>
       <DialogContent>
         <Box sx={{ py: 4, minWidth: '400px' }}>
