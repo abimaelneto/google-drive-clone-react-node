@@ -45,6 +45,9 @@ export const fileNodesSlice = createSlice({
     builder.addCase(detailFileNodesThunk.pending, (state) => {
       state.detailNode = null
     })
+    builder.addCase(detailFileNodesThunk.rejected, (state) => {
+      state.detailNode = null
+    })
     builder.addCase(
       detailFileNodesThunk.fulfilled,
       (state, action: PayloadAction<FileNode>) => {
