@@ -127,4 +127,12 @@ export class AuthController {
   me = catchAsync(async (req: Request, res: Response) => {
     res.json(req.user)
   })
+  signOut = catchAsync(async (req: Request, res: Response) => {
+    res.cookie('jwt', '', {
+      expires: new Date(0),
+      httpOnly: true,
+      secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
+    })
+    res.status(200).send()
+  })
 }
