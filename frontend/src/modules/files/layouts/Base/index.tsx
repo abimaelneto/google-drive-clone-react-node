@@ -390,12 +390,14 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
                   user?.email as string
                 ).join(', ')}
               </Typography>
-              {detailNode?.content && (
-                <>
-                  <FormLabel>Content</FormLabel>
+              <>
+                <FormLabel>Content</FormLabel>
+                {detailNode?.content ? (
                   <Typography>{detailNode?.content}</Typography>
-                </>
-              )}
+                ) : (
+                  'EMPTY'
+                )}
+              </>
             </Stack>
           )}
         </Grid>
