@@ -15,4 +15,7 @@ export class FileNodesService {
   static async update(nodeId: string, payload: Partial<FileNode>) {
     return await API.private.patch(`/files/${nodeId}`, payload)
   }
+  static async delete(nodeId: string) {
+    return await API.private.delete(`/files/${nodeId}`)
+  }
 }

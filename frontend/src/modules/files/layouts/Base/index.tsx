@@ -35,9 +35,11 @@ import { Permission } from '../../types/permissions'
 import { isOwner } from '../../utils/isOwner'
 import { listPermissions } from '../../utils/listPermissions'
 import { meThunk } from '@/modules/auth/store/thunks/me'
-import { Add, ArrowUpward } from '@mui/icons-material'
+import { Add, ArrowUpward, Delete } from '@mui/icons-material'
 import { CreateDialog } from '../../components/CreateDialog'
 import { createFileNodeThunk } from '../../store/thunks/create'
+import { DeleteDialog } from '../../components/DeleteDialog'
+import { deleteFileNodesThunk } from '../../store/thunks/delete'
 
 export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const dispatch = useAppDispatch()
@@ -54,6 +56,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<
     '' | 'file' | 'folder'
   >('')
+  const [nodeToDelete, setNodeToDelete] = useState<string>()
 
   const handleCloseEditDialog = () => {
     setIsEditDialogOpen(false)
@@ -92,6 +95,18 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     setIsMenuOpen(false)
     setMenuAnchor(null)
   }
+  const openDeleteDialog = async (node: FileNode) => {
+    try {
+      if (!detailNode || (detailNode && detailNode.id !== node.id))
+        await dispatch(detailFileNodesThunk(node.id)).unwrap()
+      console.log(detailNode, detailNodePermissions)
+      if (!detailNodePermissions.find((p) => ['DELETE', 'OWNER'].includes(p)))
+        throw new Error('Unauthorized')
+      setNodeToDelete(node.name)
+    } catch (err) {
+      alert("You don't have the permissions to perform this action")
+    }
+  }
   const handleEditNode = async ({ name, content }: Partial<FileNode>) => {
     try {
       await dispatch(
@@ -125,13 +140,26 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       console.log(err)
     }
   }
+  const handleDeleteNode = async () => {
+    try {
+      if (!nodeToDelete) return alert('No file/folder to be deleted')
+      await dispatch(deleteFileNodesThunk(nodeToDelete)).unwrap()
+      fetchFileNodes()
+    } catch (err) {
+      console.log(err)
+    } finally {
+      setNodeToDelete(undefined)
+    }
+  }
+
   const nodeList =
     (location.pathname.includes('folders') ? selectedNode?.children : nodes) ||
     []
   const handleNavigate = async (node: FileNode) => {
     try {
+      if (!node.isFolder) return openFile(node.id)
       await dispatch(getFileNodesThunk(node.id)).unwrap()
-      node.isFolder ? navigate('/folders/' + node.id) : openFile(node.id)
+      navigate('/folders/' + node.id)
     } catch (err) {
       if (err == 'Unauthorized')
         alert("You don't have the permissions to perform this action")
@@ -165,7 +193,10 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     detailNode?.permissions &&
     (isOwner(detailNode?.permissions, user?.email as string) ||
       hasPermission(detailNode?.permissions, 'WRITE'))
-
+  const detailNodePermissions =
+    detailNode?.permissions && user
+      ? listPermissions(detailNode?.permissions, user?.email)
+      : []
   const selectedNodePermissions =
     selectedNode?.permissions && user
       ? listPermissions(selectedNode?.permissions, user?.email)
@@ -181,14 +212,65 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
           <Link to="/dashboard">
             <Button>Home</Button>
           </Link>
+          <Link to="/shared">
+            <Button>Shared with me</Button>
+          </Link>
         </Grid>
-        <Grid item sm={6}>
+
+        <Grid item sm={6} p={2}>
           <Stack>
-            <Typography>
-              {selectedNode?.name || 'My Drive'} {selectedNode?.parentId}
-            </Typography>
-            <Button onClick={handleGoToParent}>Back</Button>
+            <Stack direction="row" justifyContent="center" alignItems="center">
+              <Typography sx={{ flexGrow: 1 }}>
+                {selectedNode?.name || 'My Drive'}
+              </Typography>
+
+              <Button
+                disabled={
+                  type == 'get' && !selectedNodePermissions.includes('WRITE')
+                }
+                fullWidth={false}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openMenu(e.target)
+                }}
+              >
+                <Stack direction="row" spacing={2}>
+                  <Add />
+                  <Typography>New</Typography>
+                </Stack>
+
+                <Menu
+                  onClose={() => {
+                    setIsMenuOpen(false)
+                    setMenuAnchor(null)
+                  }}
+                  anchorEl={menuAnchor}
+                  open={isMenuOpen}
+                  transformOrigin={{
+                    horizontal: 'right',
+                    vertical: 'top',
+                  }}
+                  anchorOrigin={{
+                    horizontal: 'right',
+                    vertical: 'bottom',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MenuItem onClick={() => openCreateDialog('file')}>
+                    File
+                  </MenuItem>
+                  <MenuItem onClick={() => openCreateDialog('folder')}>
+                    Folder
+                  </MenuItem>
+                </Menu>
+              </Button>
+            </Stack>
             <List sx={{ maxHeight: '80vh', overflow: 'auto' }}>
+              {type == 'get' && (
+                <IconButton onClick={handleGoToParent}>
+                  <ArrowUpward />
+                </IconButton>
+              )}
               {nodeList?.length > 0 &&
                 nodeList.map((node) => (
                   <ListItem onClick={() => handleNavigate(node)}>
@@ -200,52 +282,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
                         {node.name}
                       </ListItemText>
 
-                      <ListItemIcon>
-                        <IconButton
-                          onClick={(e: { stopPropagation: () => void }) => {
-                            openEditDialog(node.id)
-                            e.stopPropagation()
-                          }}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <EditDialog
-                          open={isEditDialogOpen}
-                          handleClose={handleCloseEditDialog}
-                          handleSubmit={handleEditNode}
-                        />
-                      </ListItemIcon>
-                      <ListItemIcon>
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openMenu(e.target, node.id)
-                          }}
-                        >
-                          <MenuDotsIcon />
-
-                          <Menu
-                            onClose={() => {
-                              setIsMenuOpen(false)
-                              setMenuAnchor(null)
-                            }}
-                            anchorEl={menuAnchor}
-                            open={isMenuOpen}
-                            transformOrigin={{
-                              horizontal: 'right',
-                              vertical: 'top',
-                            }}
-                            anchorOrigin={{
-                              horizontal: 'right',
-                              vertical: 'bottom',
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MenuItem>teste</MenuItem>
-                            <MenuItem>teste 2</MenuItem>
-                          </Menu>
-                        </IconButton>
-                      </ListItemIcon>
+                      <ListItemIcon></ListItemIcon>
                       <ListItemIcon>
                         <IconButton
                           onClick={(e) => {
@@ -256,94 +293,21 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
                           <InfoIcon />
                         </IconButton>
                       </ListItemIcon>
+                      <ListItemIcon>
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openDeleteDialog(node)
+                          }}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </ListItemIcon>
                     </ListItemButton>
                   </ListItem>
                 ))}
             </List>
           </Stack>
-        </Grid>
-        <Grid item sm={4} p={2}>
-          {isFileOpen && detailNode != null && (
-            <Stack sx={{ width: '100%' }} spacing={2}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                  {detailNode.name}
-                </Typography>
-                <Button
-                  disabled={
-                    type == 'get' && !selectedNodePermissions.includes('WRITE')
-                  }
-                  fullWidth={false}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    openMenu(e.target)
-                  }}
-                >
-                  <Stack direction="row" spacing={2}>
-                    <Add />
-                    <Typography>New</Typography>
-                  </Stack>
-
-                  <Menu
-                    onClose={() => {
-                      setIsMenuOpen(false)
-                      setMenuAnchor(null)
-                    }}
-                    anchorEl={menuAnchor}
-                    open={isMenuOpen}
-                    transformOrigin={{
-                      horizontal: 'right',
-                      vertical: 'top',
-                    }}
-                    anchorOrigin={{
-                      horizontal: 'right',
-                      vertical: 'bottom',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <MenuItem onClick={() => openCreateDialog('file')}>
-                      File
-                    </MenuItem>
-                    <MenuItem onClick={() => openCreateDialog('folder')}>
-                      Folder
-                    </MenuItem>
-                  </Menu>
-                </Button>
-              </Stack>
-              <List sx={{ maxHeight: '80vh', overflow: 'auto' }}>
-                {type == 'get' && (
-                  <IconButton onClick={handleGoToParent}>
-                    <ArrowUpward />
-                  </IconButton>
-                )}
-                {nodeList?.length > 0 &&
-                  nodeList.map((node) => (
-                    <ListItem onClick={() => handleNavigate(node)}>
-                      <ListItemButton>
-                        <ListItemIcon>
-                          {node.isFolder ? <FolderIcon /> : <FileIcon />}
-                        </ListItemIcon>
-                        <ListItemText sx={{ flexGrow: 1 }}>
-                          {node.name}
-                        </ListItemText>
-
-                        <ListItemIcon></ListItemIcon>
-                        <ListItemIcon>
-                          <IconButton
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openFile(node.id)
-                            }}
-                          >
-                            <InfoIcon />
-                          </IconButton>
-                        </ListItemIcon>
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-              </List>
-            </Stack>
-          )}
         </Grid>
         <Grid item sm={4} p={2}>
           {isFileOpen && detailNode != null && (
@@ -398,6 +362,14 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
         }}
         type={isCreateDialogOpen}
         handleSubmit={handleCreateNode}
+      />
+      <DeleteDialog
+        open={Boolean(nodeToDelete)}
+        name={nodeToDelete}
+        handleClose={() => {
+          setNodeToDelete(undefined)
+        }}
+        handleSubmit={handleDeleteNode}
       />
     </>
   )
