@@ -35,11 +35,15 @@ import { Permission } from '../../types/permissions'
 import { isOwner } from '../../utils/isOwner'
 import { listPermissions } from '../../utils/listPermissions'
 import { meThunk } from '@/modules/auth/store/thunks/me'
-import { Add, ArrowUpward, Delete } from '@mui/icons-material'
+import { Add, ArrowUpward, Delete, Share } from '@mui/icons-material'
 import { CreateDialog } from '../../components/CreateDialog'
 import { createFileNodeThunk } from '../../store/thunks/create'
 import { DeleteDialog } from '../../components/DeleteDialog'
 import { deleteFileNodesThunk } from '../../store/thunks/delete'
+import { ShareDialog } from '../../components/ShareDialog'
+import { SharingOptions } from '../../types/share'
+import { shareFileNodesThunk } from '../../store/thunks/share'
+import { checkPermissionForNode } from '../../store'
 
 export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const dispatch = useAppDispatch()
@@ -57,6 +61,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     '' | 'file' | 'folder'
   >('')
   const [nodeToDelete, setNodeToDelete] = useState<string>()
+  const [nodeToShare, setNodeToShare] = useState<FileNode | null>()
 
   const handleCloseEditDialog = () => {
     setIsEditDialogOpen(false)
@@ -99,10 +104,27 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     try {
       if (!detailNode || (detailNode && detailNode.id !== node.id))
         await dispatch(detailFileNodesThunk(node.id)).unwrap()
-      console.log(detailNode, detailNodePermissions)
       if (!detailNodePermissions.find((p) => ['DELETE', 'OWNER'].includes(p)))
         throw new Error('Unauthorized')
       setNodeToDelete(node.name)
+    } catch (err) {
+      alert("You don't have the permissions to perform this action")
+    }
+  }
+  const openShareDialog = async (node: FileNode) => {
+    try {
+      if (!detailNode || (detailNode && detailNode.id !== node.id)) {
+        await dispatch(detailFileNodesThunk(node.id)).unwrap()
+      }
+
+      dispatch(
+        checkPermissionForNode({
+          action: 'OWNER',
+          email: user?.email as string,
+        })
+      )
+
+      setNodeToShare(node)
     } catch (err) {
       alert("You don't have the permissions to perform this action")
     }
@@ -151,7 +173,19 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       setNodeToDelete(undefined)
     }
   }
-
+  const handleShareNode = async (data: SharingOptions) => {
+    try {
+      if (!nodeToShare) return alert('No file/folder to be shared')
+      await dispatch(
+        shareFileNodesThunk({ id: nodeToShare?.id, payload: data })
+      ).unwrap()
+      fetchFileNodes()
+    } catch (err) {
+      console.log(err)
+    } finally {
+      setNodeToShare(null)
+    }
+  }
   const nodeList =
     (location.pathname.includes('folders') ? selectedNode?.children : nodes) ||
     []
@@ -297,6 +331,16 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
                         <IconButton
                           onClick={(e) => {
                             e.stopPropagation()
+                            openShareDialog(node)
+                          }}
+                        >
+                          <Share />
+                        </IconButton>
+                      </ListItemIcon>
+                      <ListItemIcon>
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation()
                             openDeleteDialog(node)
                           }}
                         >
@@ -370,6 +414,13 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
           setNodeToDelete(undefined)
         }}
         handleSubmit={handleDeleteNode}
+      />
+      <ShareDialog
+        name={nodeToShare != null ? nodeToShare.name : undefined}
+        handleClose={() => {
+          setNodeToShare(null)
+        }}
+        handleSubmit={handleShareNode}
       />
     </>
   )
