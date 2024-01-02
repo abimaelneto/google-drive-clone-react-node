@@ -50,7 +50,6 @@ export class FilesController {
         nodeId,
         req.user.email
       )
-      console.log(permissions, isOwner(permissions, req.user.email))
       if (
         !isOwner(permissions, req.user.email) &&
         !permissions.find((i) => i.actions?.includes('READ'))
@@ -96,38 +95,42 @@ export class FilesController {
   create = catchAsync(
     async (req: Request, res: Response, next: NextFunction) => {
       const { parentId, ...rest } = req.body
+      let permissions: PermissionCheckResult[] = []
 
-      if (req.user.role != 'ADMIN') {
-        const permissions = await this.permissionsService.getPermissionsForNode(
+      if (req.user.role != 'ADMIN' && parentId) {
+        permissions = await this.permissionsService.listPermissionsForNode(
           parentId,
-          req.user.email,
-          'WRITE'
+          req.user.email
         )
-        if (!permissions.length)
+        if (
+          !isOwner(permissions, req.user.email) &&
+          !permissions.find((i) => i.actions?.includes('WRITE'))
+        )
           return next(
-            //eslint-disable-next-line quotes
             new AppError(
+              //eslint-disable-next-line quotes
               "You don't have permission to perform this action",
               403
             )
           )
-        if (parentId) {
-          const parentFolder = await this.filesService.get({
-            where: { id: parentId, isFolder: true },
-          })
 
-          if (!parentFolder)
-            return next(
-              // eslint-disable-next-line quotes
-              new AppError("Invalid param parentId. Folder doesn't exist", 404)
-            )
-        }
+        const parentFolder = await this.filesService.get({
+          where: { id: parentId, isFolder: true },
+        })
+
+        if (!parentFolder)
+          return next(
+            // eslint-disable-next-line quotes
+            new AppError("Invalid param parentId. Folder doesn't exist", 404)
+          )
       }
 
       const newFileNode = await this.filesService.create({
         data: {
           ...rest,
-          parent: { connect: { id: req.body.parentId } },
+          ...(parentId
+            ? { parent: { connect: { id: req.body.parentId } } }
+            : {}),
           owner: { connect: { email: req.user.email } },
         },
       })
