@@ -39,6 +39,7 @@ import { Add, ArrowUpward, Delete } from '@mui/icons-material'
 import { CreateDialog } from '../../components/CreateDialog'
 import { createFileNodeThunk } from '../../store/thunks/create'
 import { DeleteDialog } from '../../components/DeleteDialog'
+import { deleteFileNodesThunk } from '../../store/thunks/delete'
 
 export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const dispatch = useAppDispatch()
@@ -94,7 +95,18 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     setIsMenuOpen(false)
     setMenuAnchor(null)
   }
-
+  const openDeleteDialog = async (node: FileNode) => {
+    try {
+      if (!detailNode || (detailNode && detailNode.id !== node.id))
+        await dispatch(detailFileNodesThunk(node.id)).unwrap()
+      console.log(detailNode, detailNodePermissions)
+      if (!detailNodePermissions.find((p) => ['DELETE', 'OWNER'].includes(p)))
+        throw new Error('Unauthorized')
+      setNodeToDelete(node.name)
+    } catch (err) {
+      alert("You don't have the permissions to perform this action")
+    }
+  }
   const handleEditNode = async ({ name, content }: Partial<FileNode>) => {
     try {
       await dispatch(
@@ -128,19 +140,18 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       console.log(err)
     }
   }
-  const handleDeleteNode = () => {
+  const handleDeleteNode = async () => {
     try {
-      await dispatch(
-        deleteFileNodeThunk(nodeToDelete)
-      ).unwrap()
+      if (!nodeToDelete) return alert('No file/folder to be deleted')
+      await dispatch(deleteFileNodesThunk(nodeToDelete)).unwrap()
       fetchFileNodes()
-
-      setNodeToDelete(null)
     } catch (err) {
       console.log(err)
+    } finally {
+      setNodeToDelete(undefined)
     }
   }
-  }
+
   const nodeList =
     (location.pathname.includes('folders') ? selectedNode?.children : nodes) ||
     []
@@ -181,7 +192,10 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     detailNode?.permissions &&
     (isOwner(detailNode?.permissions, user?.email as string) ||
       hasPermission(detailNode?.permissions, 'WRITE'))
-
+  const detailNodePermissions =
+    detailNode?.permissions && user
+      ? listPermissions(detailNode?.permissions, user?.email)
+      : []
   const selectedNodePermissions =
     selectedNode?.permissions && user
       ? listPermissions(selectedNode?.permissions, user?.email)
@@ -197,9 +211,12 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
           <Link to="/dashboard">
             <Button>Home</Button>
           </Link>
+          <Link to="/shared">
+            <Button>Shared with me</Button>
+          </Link>
         </Grid>
 
-        <Grid item sm={4} p={2}>
+        <Grid item sm={6} p={2}>
           <Stack>
             <Stack direction="row" justifyContent="center" alignItems="center">
               <Typography sx={{ flexGrow: 1 }}>
@@ -279,7 +296,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
                         <IconButton
                           onClick={(e) => {
                             e.stopPropagation()
-                            setNodeToDelete(node.id)
+                            openDeleteDialog(node)
                           }}
                         >
                           <Delete />
@@ -347,8 +364,9 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       />
       <DeleteDialog
         open={Boolean(nodeToDelete)}
+        name={nodeToDelete}
         handleClose={() => {
-          setIsCreateDialogOpen('')
+          setNodeToDelete(undefined)
         }}
         handleSubmit={handleDeleteNode}
       />

@@ -1,16 +1,30 @@
-import { Button, Dialog, DialogActions, Stack } from '@mui/material'
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  Stack,
+  Typography,
+} from '@mui/material'
 
 export const DeleteDialog = ({
   open,
+  name,
   handleClose,
   handleSubmit,
 }: {
   open: boolean
+  name?: string
   handleClose: () => void
   handleSubmit: () => void
 }) => {
   return (
     <Dialog open={open} onClose={handleClose}>
+      <DialogContent>
+        <Typography>
+          Are you sure you want to delete <strong>{name}</strong>?
+        </Typography>
+      </DialogContent>
       <DialogActions>
         <Stack
           direction="row"
