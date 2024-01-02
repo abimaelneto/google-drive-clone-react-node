@@ -35,9 +35,10 @@ import { Permission } from '../../types/permissions'
 import { isOwner } from '../../utils/isOwner'
 import { listPermissions } from '../../utils/listPermissions'
 import { meThunk } from '@/modules/auth/store/thunks/me'
-import { Add, ArrowUpward } from '@mui/icons-material'
+import { Add, ArrowUpward, Delete } from '@mui/icons-material'
 import { CreateDialog } from '../../components/CreateDialog'
 import { createFileNodeThunk } from '../../store/thunks/create'
+import { DeleteDialog } from '../../components/DeleteDialog'
 
 export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const dispatch = useAppDispatch()
@@ -54,6 +55,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<
     '' | 'file' | 'folder'
   >('')
+  const [nodeToDelete, setNodeToDelete] = useState<string>()
 
   const handleCloseEditDialog = () => {
     setIsEditDialogOpen(false)
@@ -92,6 +94,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     setIsMenuOpen(false)
     setMenuAnchor(null)
   }
+
   const handleEditNode = async ({ name, content }: Partial<FileNode>) => {
     try {
       await dispatch(
@@ -124,6 +127,19 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     } catch (err) {
       console.log(err)
     }
+  }
+  const handleDeleteNode = () => {
+    try {
+      await dispatch(
+        deleteFileNodeThunk(nodeToDelete)
+      ).unwrap()
+      fetchFileNodes()
+
+      setNodeToDelete(null)
+    } catch (err) {
+      console.log(err)
+    }
+  }
   }
   const nodeList =
     (location.pathname.includes('folders') ? selectedNode?.children : nodes) ||
@@ -259,6 +275,16 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
                           <InfoIcon />
                         </IconButton>
                       </ListItemIcon>
+                      <ListItemIcon>
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setNodeToDelete(node.id)
+                          }}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </ListItemIcon>
                     </ListItemButton>
                   </ListItem>
                 ))}
@@ -318,6 +344,13 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
         }}
         type={isCreateDialogOpen}
         handleSubmit={handleCreateNode}
+      />
+      <DeleteDialog
+        open={Boolean(nodeToDelete)}
+        handleClose={() => {
+          setIsCreateDialogOpen('')
+        }}
+        handleSubmit={handleDeleteNode}
       />
     </>
   )
