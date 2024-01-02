@@ -25,11 +25,14 @@ export const CreateDialog = ({
     const { name, value } = e.target as HTMLInputElement
     setData((old) => ({ ...old, [name]: value }))
   }
-
+  const internalHandleClose = () => {
+    setData({})
+    handleClose()
+  }
   return (
     <Dialog
       open={Boolean(type)}
-      onClose={handleClose}
+      onClose={internalHandleClose}
       sx={{ p: 2 }}
       onClick={(e) => e.stopPropagation()}
     >
@@ -62,7 +65,7 @@ export const CreateDialog = ({
           py={2}
           justifyContent="space-between"
         >
-          <Button onClick={handleClose}>Cancel</Button>
+          <Button onClick={internalHandleClose}>Cancel</Button>
           <Button
             onClick={() => {
               data != null && handleSubmit(data)
