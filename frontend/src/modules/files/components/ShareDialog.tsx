@@ -8,12 +8,14 @@ import {
   DialogTitle,
   FormControlLabel,
   FormGroup,
+  Radio,
+  RadioGroup,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
 import { FormEventHandler, useState } from 'react'
-import { SharingPayload } from '../types/share'
+import { SharingOptions } from '../types/share'
 
 const initialData = {
   actions: { WRITE: false, DELETE: false },
@@ -22,17 +24,15 @@ const initialData = {
 }
 
 export const ShareDialog = ({
-  open,
   handleClose,
   handleSubmit,
   name,
 }: {
-  open: boolean
   handleClose: () => void
-  handleSubmit?: (data: SharingPayload) => void
-  name: string
+  handleSubmit: (data: SharingOptions) => void
+  name?: string
 }) => {
-  const [data, setData] = useState<SharingPayload>(initialData)
+  const [data, setData] = useState<SharingOptions>(initialData)
   const handleChange: FormEventHandler<HTMLDivElement> = (e) => {
     const { name, value } = e.target as HTMLInputElement
     setData((old) => ({ ...old, [name]: value }))
@@ -49,7 +49,7 @@ export const ShareDialog = ({
   }
   return (
     <Dialog
-      open={open}
+      open={Boolean(name)}
       onClose={internalHandleClose}
       sx={{ p: 2 }}
       onClick={(e) => e.stopPropagation()}
@@ -100,18 +100,25 @@ export const ShareDialog = ({
               nested files and folders too)?
             </Typography>
             <FormGroup>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    onChange={() =>
-                      setData((old) => ({ ...old, recursive: !old.recursive }))
-                    }
-                    name="recursive"
-                    checked={data.recursive}
-                  />
+              <RadioGroup
+                aria-labelledby="demo-controlled-radio-buttons-group"
+                name="controlled-radio-buttons-group"
+                value={data.recursive}
+                onChange={() =>
+                  setData((old) => ({ ...old, recursive: !old.recursive }))
                 }
-                label="Recursiveness"
-              />
+              >
+                <FormControlLabel
+                  value={true}
+                  control={<Radio />}
+                  label="Yes"
+                />
+                <FormControlLabel
+                  value={false}
+                  control={<Radio />}
+                  label="No"
+                />
+              </RadioGroup>
             </FormGroup>
           </Stack>
         </Box>
@@ -130,6 +137,7 @@ export const ShareDialog = ({
               setData(initialData)
             }}
             variant="contained"
+            disabled={!data.email}
           >
             Save
           </Button>
