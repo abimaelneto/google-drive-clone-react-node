@@ -9,6 +9,6 @@ export type FileNode = {
   isFolder: boolean
   content?: string
   children?: FileNode[]
-  parentId: string
+  parentId: string | null
   permissions?: Permission[]
 }
