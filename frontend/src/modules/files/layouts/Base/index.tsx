@@ -69,7 +69,6 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     try {
       if (!detailNode || (detailNode && detailNode.id != nodeId))
         await dispatch(detailFileNodesThunk(nodeId)).unwrap()
-
       setIsFileOpen(true)
     } catch (err) {
       console.log(err)

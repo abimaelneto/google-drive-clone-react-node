@@ -9,24 +9,60 @@ import {
   Typography,
   IconButton,
   Grid,
+  Button,
 } from '@mui/material'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { listUsersThunk } from '../store/thunks/list'
-import { Delete, Edit, Info } from '@mui/icons-material'
+import { Add, Delete, Info } from '@mui/icons-material'
+import { useNavigate } from 'react-router-dom'
+import { CreateUserDialog } from '../components/CreateUserDialog'
+import { createUserThunk } from '../store/thunks/create'
+import { User } from '@/types/user'
 
 export const ListUsers = () => {
   const dispatch = useAppDispatch()
   const { users } = useAppSelector((s) => s.users)
+  const navigate = useNavigate()
 
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const openCreateDialog = () => {
+    setIsCreateDialogOpen(true)
+  }
+
+  const handleCreateUser = async (data: Partial<User>) => {
+    try {
+      await dispatch(createUserThunk(data)).unwrap()
+      dispatch(listUsersThunk())
+      setIsCreateDialogOpen(false)
+    } catch (err) {
+      console.log(err)
+      switch (err as string) {
+        case 'Bad Request':
+          return alert('Please review form data')
+        case 'Unauthorized':
+          return alert("You don't have the permissions to perform this action")
+        default:
+          return alert('Something wrong happened. Please Try again later')
+      }
+    }
+  }
   useEffect(() => {
     dispatch(listUsersThunk())
   }, [])
   return (
-    <Grid item sm={6} p={2}>
+    <Grid item sm={8} p={2}>
       <Stack sx={{ width: '100%' }} justifyContent="center">
-        <Typography variant="h6" align="left">
-          Users
-        </Typography>
+        <Stack direction="row" justifyContent="space-between">
+          <Typography variant="h6" align="left" sx={{ flexGrow: 1 }}>
+            Users
+          </Typography>
+          <Button fullWidth={false} onClick={openCreateDialog}>
+            <Stack direction="row" spacing={2}>
+              <Add />
+              <Typography>New</Typography>
+            </Stack>
+          </Button>
+        </Stack>
         <Table>
           <TableHead>
             <TableRow>
@@ -34,7 +70,6 @@ export const ListUsers = () => {
               <TableCell>Email</TableCell>
               <TableCell>Role</TableCell>
               <TableCell>View</TableCell>
-              <TableCell>Edit</TableCell>
               <TableCell>Delete</TableCell>
             </TableRow>
           </TableHead>
@@ -48,15 +83,11 @@ export const ListUsers = () => {
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.role}</TableCell>
                 <TableCell>
-                  <IconButton>
+                  <IconButton onClick={() => navigate('/users/' + user.id)}>
                     <Info />
                   </IconButton>
                 </TableCell>
-                <TableCell>
-                  <IconButton>
-                    <Edit />
-                  </IconButton>
-                </TableCell>
+
                 <TableCell>
                   <IconButton>
                     <Delete />
@@ -67,6 +98,11 @@ export const ListUsers = () => {
           </TableBody>
         </Table>
       </Stack>
+      <CreateUserDialog
+        open={isCreateDialogOpen}
+        handleClose={() => setIsCreateDialogOpen(false)}
+        handleSubmit={handleCreateUser}
+      />
     </Grid>
   )
 }
