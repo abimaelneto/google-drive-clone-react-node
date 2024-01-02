@@ -157,8 +157,9 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     []
   const handleNavigate = async (node: FileNode) => {
     try {
+      if (!node.isFolder) return openFile(node.id)
       await dispatch(getFileNodesThunk(node.id)).unwrap()
-      node.isFolder ? navigate('/folders/' + node.id) : openFile(node.id)
+      navigate('/folders/' + node.id)
     } catch (err) {
       if (err == 'Unauthorized')
         alert("You don't have the permissions to perform this action")
