@@ -188,7 +188,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
               {selectedNode?.name || 'My Drive'} {selectedNode?.parentId}
             </Typography>
             <Button onClick={handleGoToParent}>Back</Button>
-            <List>
+            <List sx={{ maxHeight: '80vh', overflow: 'auto' }}>
               {nodeList?.length > 0 &&
                 nodeList.map((node) => (
                   <ListItem onClick={() => handleNavigate(node)}>
