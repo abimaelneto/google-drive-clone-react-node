@@ -8,6 +8,10 @@ export class FileNodesService {
   static async get(nodeId: string) {
     return await API.private.get(`/files/${nodeId}`)
   }
+
+  static async create(payload: Partial<FileNode>) {
+    return await API.private.post('/files', payload)
+  }
   static async update(nodeId: string, payload: Partial<FileNode>) {
     return await API.private.patch(`/files/${nodeId}`, payload)
   }

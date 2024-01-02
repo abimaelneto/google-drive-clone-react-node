@@ -35,6 +35,9 @@ import { Permission } from '../../types/permissions'
 import { isOwner } from '../../utils/isOwner'
 import { listPermissions } from '../../utils/listPermissions'
 import { meThunk } from '@/modules/auth/store/thunks/me'
+import { Add, ArrowUpward } from '@mui/icons-material'
+import { CreateDialog } from '../../components/CreateDialog'
+import { createFileNodeThunk } from '../../store/thunks/create'
 
 export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const dispatch = useAppDispatch()
@@ -48,10 +51,13 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const [isFileOpen, setIsFileOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<
+    '' | 'file' | 'folder'
+  >('')
+
   const handleCloseEditDialog = () => {
     setIsEditDialogOpen(false)
   }
-
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
   const openFile = async (nodeId: string) => {
     try {
@@ -64,10 +70,8 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       alert("You don't have the permissions to perform this action")
     }
   }
-  const openMenu = (target: EventTarget, nodeId: string) => {
-    setSelectedNodeForActions(nodeId)
+  const openMenu = (target: EventTarget) => {
     setIsMenuOpen(true)
-
     setMenuAnchor(target as HTMLElement)
   }
 
@@ -83,7 +87,11 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       alert("You don't have the permissions to perform this action")
     }
   }
-
+  const openCreateDialog = (type: 'file' | 'folder') => {
+    setIsCreateDialogOpen(type)
+    setIsMenuOpen(false)
+    setMenuAnchor(null)
+  }
   const handleEditNode = async ({ name, content }: Partial<FileNode>) => {
     try {
       await dispatch(
@@ -96,6 +104,23 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       if (nodeToBeEdited != null && detailNode?.id == nodeToBeEdited?.id)
         dispatch(detailFileNodesThunk(nodeToBeEdited?.id))
       setIsEditDialogOpen(false)
+    } catch (err) {
+      console.log(err)
+    }
+  }
+  const handleCreateNode = async ({ name, content }: Partial<FileNode>) => {
+    try {
+      await dispatch(
+        createFileNodeThunk({
+          name,
+          content,
+          isFolder: isCreateDialogOpen == 'folder',
+          parentId: selectedNode ? selectedNode.id : null,
+        })
+      ).unwrap()
+      fetchFileNodes()
+
+      setIsCreateDialogOpen('')
     } catch (err) {
       console.log(err)
     }
@@ -131,6 +156,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       }
     } catch (err) {
       navigate('/dashboard')
+      dispatch({ type: 'fileNode/resetSelectedNode' })
     }
   }
 
@@ -139,128 +165,240 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     detailNode?.permissions &&
     (isOwner(detailNode?.permissions, user?.email as string) ||
       hasPermission(detailNode?.permissions, 'WRITE'))
+
+  const selectedNodePermissions =
+    selectedNode?.permissions && user
+      ? listPermissions(selectedNode?.permissions, user?.email)
+      : []
   useEffect(() => {
     fetchFileNodes()
     if (!user) dispatch(meThunk())
   }, [params.fileNodeId])
   return (
-    <Grid container>
-      <Grid item sm={2}>
-        <Link to="/dashboard">
-          <Button>Home</Button>
-        </Link>
-      </Grid>
-      <Grid item sm={6}>
-        <Stack>
-          <Typography>
-            {selectedNode?.name || 'My Drive'} {selectedNode?.parentId}
-          </Typography>
-          <Button onClick={handleGoToParent}>Back</Button>
-          <List>
-            {nodeList?.length > 0 &&
-              nodeList.map((node) => (
-                <ListItem onClick={() => handleNavigate(node)}>
-                  <ListItemButton>
-                    <ListItemIcon>
-                      {node.isFolder ? <FolderIcon /> : <FileIcon />}
-                    </ListItemIcon>
-                    <ListItemText sx={{ flexGrow: 1 }}>
-                      {node.name}
-                    </ListItemText>
-
-                    <ListItemIcon>
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openMenu(e.target, node.id)
-                        }}
-                      >
-                        <MenuDotsIcon />
-
-                        <Menu
-                          onClose={() => {
-                            setIsMenuOpen(false)
-                            setMenuAnchor(null)
-                          }}
-                          anchorEl={menuAnchor}
-                          open={isMenuOpen}
-                          transformOrigin={{
-                            horizontal: 'right',
-                            vertical: 'top',
-                          }}
-                          anchorOrigin={{
-                            horizontal: 'right',
-                            vertical: 'bottom',
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MenuItem>teste</MenuItem>
-                          <MenuItem>teste 2</MenuItem>
-                        </Menu>
-                      </IconButton>
-                    </ListItemIcon>
-                    <ListItemIcon>
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openFile(node.id)
-                        }}
-                      >
-                        <InfoIcon />
-                      </IconButton>
-                    </ListItemIcon>
-                  </ListItemButton>
-                </ListItem>
-              ))}
-          </List>
-        </Stack>
-      </Grid>
-      <Grid item sm={4} p={2}>
-        {isFileOpen && detailNode != null && (
-          <Stack sx={{ width: '100%' }} spacing={2}>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                {detailNode.name}
-              </Typography>
-
-              <IconButton
-                disabled={!hasPermissionToEditDetailNode}
-                onClick={(e: { stopPropagation: () => void }) => {
-                  openEditDialog(detailNode.id)
-                  e.stopPropagation()
-                }}
-              >
-                <EditIcon />
-              </IconButton>
-              <EditDialog
-                open={isEditDialogOpen}
-                handleClose={handleCloseEditDialog}
-                handleSubmit={handleEditNode}
-              />
-              <IconButton onClick={() => setIsFileOpen(false)}>
-                <CloseIcon />
-              </IconButton>
-            </Stack>
-
-            <FormLabel>Owner</FormLabel>
-            <Typography>{detailNode?.owner?.name}</Typography>
-            <Typography>{detailNode?.owner?.email}</Typography>
-            <FormLabel>Permissions</FormLabel>
+    <>
+      <Grid container>
+        <Grid item sm={2}>
+          <Link to="/dashboard">
+            <Button>Home</Button>
+          </Link>
+        </Grid>
+        <Grid item sm={6}>
+          <Stack>
             <Typography>
-              {listPermissions(
-                detailNode?.permissions as Permission[],
-                user?.email as string
-              ).join(', ')}
+              {selectedNode?.name || 'My Drive'} {selectedNode?.parentId}
             </Typography>
-            {detailNode?.content && (
-              <>
-                <FormLabel>Content</FormLabel>
-                <Typography>{detailNode?.content}</Typography>
-              </>
-            )}
+            <Button onClick={handleGoToParent}>Back</Button>
+            <List sx={{ maxHeight: '80vh', overflow: 'auto' }}>
+              {nodeList?.length > 0 &&
+                nodeList.map((node) => (
+                  <ListItem onClick={() => handleNavigate(node)}>
+                    <ListItemButton>
+                      <ListItemIcon>
+                        {node.isFolder ? <FolderIcon /> : <FileIcon />}
+                      </ListItemIcon>
+                      <ListItemText sx={{ flexGrow: 1 }}>
+                        {node.name}
+                      </ListItemText>
+
+                      <ListItemIcon>
+                        <IconButton
+                          onClick={(e: { stopPropagation: () => void }) => {
+                            openEditDialog(node.id)
+                            e.stopPropagation()
+                          }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <EditDialog
+                          open={isEditDialogOpen}
+                          handleClose={handleCloseEditDialog}
+                          handleSubmit={handleEditNode}
+                        />
+                      </ListItemIcon>
+                      <ListItemIcon>
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openMenu(e.target, node.id)
+                          }}
+                        >
+                          <MenuDotsIcon />
+
+                          <Menu
+                            onClose={() => {
+                              setIsMenuOpen(false)
+                              setMenuAnchor(null)
+                            }}
+                            anchorEl={menuAnchor}
+                            open={isMenuOpen}
+                            transformOrigin={{
+                              horizontal: 'right',
+                              vertical: 'top',
+                            }}
+                            anchorOrigin={{
+                              horizontal: 'right',
+                              vertical: 'bottom',
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MenuItem>teste</MenuItem>
+                            <MenuItem>teste 2</MenuItem>
+                          </Menu>
+                        </IconButton>
+                      </ListItemIcon>
+                      <ListItemIcon>
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openFile(node.id)
+                          }}
+                        >
+                          <InfoIcon />
+                        </IconButton>
+                      </ListItemIcon>
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+            </List>
           </Stack>
-        )}
+        </Grid>
+        <Grid item sm={4} p={2}>
+          {isFileOpen && detailNode != null && (
+            <Stack sx={{ width: '100%' }} spacing={2}>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                  {detailNode.name}
+                </Typography>
+                <Button
+                  disabled={
+                    type == 'get' && !selectedNodePermissions.includes('WRITE')
+                  }
+                  fullWidth={false}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openMenu(e.target)
+                  }}
+                >
+                  <Stack direction="row" spacing={2}>
+                    <Add />
+                    <Typography>New</Typography>
+                  </Stack>
+
+                  <Menu
+                    onClose={() => {
+                      setIsMenuOpen(false)
+                      setMenuAnchor(null)
+                    }}
+                    anchorEl={menuAnchor}
+                    open={isMenuOpen}
+                    transformOrigin={{
+                      horizontal: 'right',
+                      vertical: 'top',
+                    }}
+                    anchorOrigin={{
+                      horizontal: 'right',
+                      vertical: 'bottom',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MenuItem onClick={() => openCreateDialog('file')}>
+                      File
+                    </MenuItem>
+                    <MenuItem onClick={() => openCreateDialog('folder')}>
+                      Folder
+                    </MenuItem>
+                  </Menu>
+                </Button>
+              </Stack>
+              <List sx={{ maxHeight: '80vh', overflow: 'auto' }}>
+                {type == 'get' && (
+                  <IconButton onClick={handleGoToParent}>
+                    <ArrowUpward />
+                  </IconButton>
+                )}
+                {nodeList?.length > 0 &&
+                  nodeList.map((node) => (
+                    <ListItem onClick={() => handleNavigate(node)}>
+                      <ListItemButton>
+                        <ListItemIcon>
+                          {node.isFolder ? <FolderIcon /> : <FileIcon />}
+                        </ListItemIcon>
+                        <ListItemText sx={{ flexGrow: 1 }}>
+                          {node.name}
+                        </ListItemText>
+
+                        <ListItemIcon></ListItemIcon>
+                        <ListItemIcon>
+                          <IconButton
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openFile(node.id)
+                            }}
+                          >
+                            <InfoIcon />
+                          </IconButton>
+                        </ListItemIcon>
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+              </List>
+            </Stack>
+          )}
+        </Grid>
+        <Grid item sm={4} p={2}>
+          {isFileOpen && detailNode != null && (
+            <Stack sx={{ width: '100%' }} spacing={2}>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                  {detailNode.name}
+                </Typography>
+
+                <IconButton
+                  disabled={!hasPermissionToEditDetailNode}
+                  onClick={(e: { stopPropagation: () => void }) => {
+                    openEditDialog(detailNode.id)
+                    e.stopPropagation()
+                  }}
+                >
+                  <EditIcon />
+                </IconButton>
+                <EditDialog
+                  open={isEditDialogOpen}
+                  handleClose={handleCloseEditDialog}
+                  handleSubmit={handleEditNode}
+                />
+                <IconButton onClick={() => setIsFileOpen(false)}>
+                  <CloseIcon />
+                </IconButton>
+              </Stack>
+
+              <FormLabel>Owner</FormLabel>
+              <Typography>{detailNode?.owner?.name}</Typography>
+              <Typography>{detailNode?.owner?.email}</Typography>
+              <FormLabel>Permissions</FormLabel>
+              <Typography>
+                {listPermissions(
+                  detailNode?.permissions as Permission[],
+                  user?.email as string
+                ).join(', ')}
+              </Typography>
+              {detailNode?.content && (
+                <>
+                  <FormLabel>Content</FormLabel>
+                  <Typography>{detailNode?.content}</Typography>
+                </>
+              )}
+            </Stack>
+          )}
+        </Grid>
       </Grid>
-    </Grid>
+      <CreateDialog
+        handleClose={() => {
+          setIsCreateDialogOpen('')
+        }}
+        type={isCreateDialogOpen}
+        handleSubmit={handleCreateNode}
+      />
+    </>
   )
 }
