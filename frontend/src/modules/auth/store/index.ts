@@ -3,6 +3,7 @@ import { loginThunk } from './thunks/login'
 import { PayloadAction } from '@reduxjs/toolkit/react'
 import { User } from '@/types/user'
 import { meThunk } from './thunks/me'
+import { signOutThunk } from './thunks/signOut'
 
 type AuthState = {
   user: User | null
@@ -32,6 +33,10 @@ export const authSlice = createSlice({
       })
       .addCase(meThunk.fulfilled, (state, action: PayloadAction<User>) => {
         state.user = action.payload
+      })
+      .addCase(signOutThunk.fulfilled, (state) => {
+        state.user = null
+        state.token = null
       })
   },
 })

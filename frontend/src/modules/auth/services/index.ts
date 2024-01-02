@@ -18,4 +18,7 @@ export class AuthService {
   static async me() {
     return await API.private.get('/auth/me')
   }
+  static async signOut() {
+    return await API.private.get('/auth/signout')
+  }
 }
