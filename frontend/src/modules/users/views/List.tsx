@@ -20,6 +20,8 @@ import { useNavigate } from 'react-router-dom'
 import { CreateUserDialog } from '../components/CreateUserDialog'
 import { createUserThunk } from '../store/thunks/create'
 import { User } from '@/types/user'
+import { DeleteDialog } from '@/modules/files/components/DeleteDialog'
+import { deleteUserThunk } from '../store/thunks/delete'
 
 export const ListUsers = () => {
   const dispatch = useAppDispatch()
@@ -28,15 +30,34 @@ export const ListUsers = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(5)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
   const openCreateDialog = () => {
     setIsCreateDialogOpen(true)
   }
-
   const handleCreateUser = async (data: Partial<User>) => {
     try {
       await dispatch(createUserThunk(data)).unwrap()
       dispatch(listUsersThunk())
       setIsCreateDialogOpen(false)
+    } catch (err) {
+      console.log(err)
+      switch (err as string) {
+        case 'Bad Request':
+          return alert('Please review form data')
+        case 'Unauthorized':
+          return alert("You don't have the permissions to perform this action")
+        default:
+          return alert('Something wrong happened. Please Try again later')
+      }
+    }
+  }
+
+  const handleDeleteUser = async () => {
+    try {
+      if (!userToDelete) return alert('No user to be deleted')
+      await dispatch(deleteUserThunk(userToDelete.id)).unwrap()
+      dispatch(listUsersThunk())
+      setUserToDelete(null)
     } catch (err) {
       console.log(err)
       switch (err as string) {
@@ -104,7 +125,12 @@ export const ListUsers = () => {
                     </TableCell>
 
                     <TableCell>
-                      <IconButton>
+                      <IconButton
+                        disabled={user.role == 'ADMIN'}
+                        onClick={() => {
+                          setUserToDelete(user)
+                        }}
+                      >
                         <Delete />
                       </IconButton>
                     </TableCell>
@@ -127,6 +153,12 @@ export const ListUsers = () => {
         open={isCreateDialogOpen}
         handleClose={() => setIsCreateDialogOpen(false)}
         handleSubmit={handleCreateUser}
+      />
+      <DeleteDialog
+        open={Boolean(userToDelete)}
+        name={userToDelete ? userToDelete.name : ''}
+        handleClose={() => setUserToDelete(null)}
+        handleSubmit={handleDeleteUser}
       />
     </Grid>
   )

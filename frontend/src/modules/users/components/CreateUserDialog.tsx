@@ -33,7 +33,7 @@ export const CreateUserDialog = ({
   const [data, setData] = useState<{
     name: string
     email: string
-    role: 'ADMIN' | 'USER'
+    role: string
     password: string
   }>(initialState)
   const handleChange: FormEventHandler<HTMLDivElement> = (e) => {
