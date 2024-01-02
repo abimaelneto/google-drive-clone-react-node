@@ -182,13 +182,61 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
             <Button>Home</Button>
           </Link>
         </Grid>
-        <Grid item sm={6}>
+
+        <Grid item sm={4} p={2}>
           <Stack>
-            <Typography>
-              {selectedNode?.name || 'My Drive'} {selectedNode?.parentId}
-            </Typography>
-            <Button onClick={handleGoToParent}>Back</Button>
+            <Stack direction="row" justifyContent="center" alignItems="center">
+              <Typography sx={{ flexGrow: 1 }}>
+                {selectedNode?.name || 'My Drive'}
+              </Typography>
+
+              <Button
+                disabled={
+                  type == 'get' && !selectedNodePermissions.includes('WRITE')
+                }
+                fullWidth={false}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openMenu(e.target)
+                }}
+              >
+                <Stack direction="row" spacing={2}>
+                  <Add />
+                  <Typography>New</Typography>
+                </Stack>
+
+                <Menu
+                  onClose={() => {
+                    setIsMenuOpen(false)
+                    setMenuAnchor(null)
+                  }}
+                  anchorEl={menuAnchor}
+                  open={isMenuOpen}
+                  transformOrigin={{
+                    horizontal: 'right',
+                    vertical: 'top',
+                  }}
+                  anchorOrigin={{
+                    horizontal: 'right',
+                    vertical: 'bottom',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MenuItem onClick={() => openCreateDialog('file')}>
+                    File
+                  </MenuItem>
+                  <MenuItem onClick={() => openCreateDialog('folder')}>
+                    Folder
+                  </MenuItem>
+                </Menu>
+              </Button>
+            </Stack>
             <List sx={{ maxHeight: '80vh', overflow: 'auto' }}>
+              {type == 'get' && (
+                <IconButton onClick={handleGoToParent}>
+                  <ArrowUpward />
+                </IconButton>
+              )}
               {nodeList?.length > 0 &&
                 nodeList.map((node) => (
                   <ListItem onClick={() => handleNavigate(node)}>
@@ -200,52 +248,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
                         {node.name}
                       </ListItemText>
 
-                      <ListItemIcon>
-                        <IconButton
-                          onClick={(e: { stopPropagation: () => void }) => {
-                            openEditDialog(node.id)
-                            e.stopPropagation()
-                          }}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <EditDialog
-                          open={isEditDialogOpen}
-                          handleClose={handleCloseEditDialog}
-                          handleSubmit={handleEditNode}
-                        />
-                      </ListItemIcon>
-                      <ListItemIcon>
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openMenu(e.target, node.id)
-                          }}
-                        >
-                          <MenuDotsIcon />
-
-                          <Menu
-                            onClose={() => {
-                              setIsMenuOpen(false)
-                              setMenuAnchor(null)
-                            }}
-                            anchorEl={menuAnchor}
-                            open={isMenuOpen}
-                            transformOrigin={{
-                              horizontal: 'right',
-                              vertical: 'top',
-                            }}
-                            anchorOrigin={{
-                              horizontal: 'right',
-                              vertical: 'bottom',
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MenuItem>teste</MenuItem>
-                            <MenuItem>teste 2</MenuItem>
-                          </Menu>
-                        </IconButton>
-                      </ListItemIcon>
+                      <ListItemIcon></ListItemIcon>
                       <ListItemIcon>
                         <IconButton
                           onClick={(e) => {
@@ -261,89 +264,6 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
                 ))}
             </List>
           </Stack>
-        </Grid>
-        <Grid item sm={4} p={2}>
-          {isFileOpen && detailNode != null && (
-            <Stack sx={{ width: '100%' }} spacing={2}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                  {detailNode.name}
-                </Typography>
-                <Button
-                  disabled={
-                    type == 'get' && !selectedNodePermissions.includes('WRITE')
-                  }
-                  fullWidth={false}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    openMenu(e.target)
-                  }}
-                >
-                  <Stack direction="row" spacing={2}>
-                    <Add />
-                    <Typography>New</Typography>
-                  </Stack>
-
-                  <Menu
-                    onClose={() => {
-                      setIsMenuOpen(false)
-                      setMenuAnchor(null)
-                    }}
-                    anchorEl={menuAnchor}
-                    open={isMenuOpen}
-                    transformOrigin={{
-                      horizontal: 'right',
-                      vertical: 'top',
-                    }}
-                    anchorOrigin={{
-                      horizontal: 'right',
-                      vertical: 'bottom',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <MenuItem onClick={() => openCreateDialog('file')}>
-                      File
-                    </MenuItem>
-                    <MenuItem onClick={() => openCreateDialog('folder')}>
-                      Folder
-                    </MenuItem>
-                  </Menu>
-                </Button>
-              </Stack>
-              <List sx={{ maxHeight: '80vh', overflow: 'auto' }}>
-                {type == 'get' && (
-                  <IconButton onClick={handleGoToParent}>
-                    <ArrowUpward />
-                  </IconButton>
-                )}
-                {nodeList?.length > 0 &&
-                  nodeList.map((node) => (
-                    <ListItem onClick={() => handleNavigate(node)}>
-                      <ListItemButton>
-                        <ListItemIcon>
-                          {node.isFolder ? <FolderIcon /> : <FileIcon />}
-                        </ListItemIcon>
-                        <ListItemText sx={{ flexGrow: 1 }}>
-                          {node.name}
-                        </ListItemText>
-
-                        <ListItemIcon></ListItemIcon>
-                        <ListItemIcon>
-                          <IconButton
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openFile(node.id)
-                            }}
-                          >
-                            <InfoIcon />
-                          </IconButton>
-                        </ListItemIcon>
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-              </List>
-            </Stack>
-          )}
         </Grid>
         <Grid item sm={4} p={2}>
           {isFileOpen && detailNode != null && (
