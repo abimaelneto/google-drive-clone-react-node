@@ -10,8 +10,10 @@ import {
   IconButton,
   Grid,
   Button,
+  TablePagination,
+  TableContainer,
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { ChangeEvent, useEffect, useState } from 'react'
 import { listUsersThunk } from '../store/thunks/list'
 import { Add, Delete, Info } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
@@ -23,7 +25,8 @@ export const ListUsers = () => {
   const dispatch = useAppDispatch()
   const { users } = useAppSelector((s) => s.users)
   const navigate = useNavigate()
-
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(5)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const openCreateDialog = () => {
     setIsCreateDialogOpen(true)
@@ -46,6 +49,15 @@ export const ListUsers = () => {
       }
     }
   }
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handleChangeRowsPerPage = (event: ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(+event.target.value)
+    setPage(0)
+  }
   useEffect(() => {
     dispatch(listUsersThunk())
   }, [])
@@ -63,40 +75,53 @@ export const ListUsers = () => {
             </Stack>
           </Button>
         </Stack>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>View</TableCell>
-              <TableCell>Delete</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow
-                key={user.id}
-                sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-              >
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.role}</TableCell>
-                <TableCell>
-                  <IconButton onClick={() => navigate('/users/' + user.id)}>
-                    <Info />
-                  </IconButton>
-                </TableCell>
-
-                <TableCell>
-                  <IconButton>
-                    <Delete />
-                  </IconButton>
-                </TableCell>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Role</TableCell>
+                <TableCell>View</TableCell>
+                <TableCell>Delete</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {users
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((user) => (
+                  <TableRow
+                    key={user.id}
+                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                  >
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.role}</TableCell>
+                    <TableCell>
+                      <IconButton onClick={() => navigate('/users/' + user.id)}>
+                        <Info />
+                      </IconButton>
+                    </TableCell>
+
+                    <TableCell>
+                      <IconButton>
+                        <Delete />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          rowsPerPageOptions={[2, 5, 10]}
+          component="div"
+          count={users.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
       </Stack>
       <CreateUserDialog
         open={isCreateDialogOpen}
