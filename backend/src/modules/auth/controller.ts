@@ -124,4 +124,7 @@ export class AuthController {
       next()
     }
   }
+  me = catchAsync(async (req: Request, res: Response) => {
+    res.json(req.user)
+  })
 }
