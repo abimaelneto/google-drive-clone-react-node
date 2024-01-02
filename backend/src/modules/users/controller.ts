@@ -26,25 +26,28 @@ export class UsersController {
     const data = await this.service?.list()
     return res.json(data)
   })
-  get = catchAsync(async (req: Request, res: Response, next:NextFunction) => {
+  get = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const { userId } = req.params
-    if(!userId) return next(new AppError('Missing required param userId', 400))
-    const user = await this.service?.get({id:userId})
+    if (!userId) return next(new AppError('Missing required param userId', 400))
+    const user = await this.service?.get({ id: userId })
     return res.json(user)
   })
-  update = catchAsync(async (req: Request, res: Response, next:NextFunction) => {
-    const { userId } = req.params
-    if(!userId) return next(new AppError('Missing required param userId', 400))
-    await this.service?.update(userId, req.body)
-    return res.status(204)
-  })
+  update = catchAsync(
+    async (req: Request, res: Response, next: NextFunction) => {
+      const { userId } = req.params
+      if (!userId)
+        return next(new AppError('Missing required param userId', 400))
+      await this.service?.update(userId, req.body)
+      return res.status(204)
+    }
+  )
   delete = catchAsync(
     async (req: Request, res: Response, next: NextFunction) => {
       const { userId } = req.params
-      const user = this.service?.get({id:userId})
+      const user = this.service?.get({ id: userId })
       if (!user) return next(new AppError('User not found.', 404))
       this.service?.delete(userId)
-      return res.status(204)
+      return res.status(204).send()
     }
   )
 }

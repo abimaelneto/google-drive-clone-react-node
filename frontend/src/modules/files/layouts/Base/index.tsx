@@ -17,7 +17,6 @@ import { useLocation, Link, useNavigate, useParams } from 'react-router-dom'
 import FolderIcon from '@mui/icons-material/Folder'
 import FileIcon from '@mui/icons-material/Description'
 import InfoIcon from '@mui/icons-material/InfoOutlined'
-import MenuDotsIcon from '@mui/icons-material/MoreVert'
 import EditIcon from '@mui/icons-material/Edit'
 
 import CloseIcon from '@mui/icons-material/Close'
@@ -34,7 +33,6 @@ import { hasPermission } from '../../utils/hasPermission'
 import { Permission } from '../../types/permissions'
 import { isOwner } from '../../utils/isOwner'
 import { listPermissions } from '../../utils/listPermissions'
-import { meThunk } from '@/modules/auth/store/thunks/me'
 import { Add, ArrowUpward, Delete, Share } from '@mui/icons-material'
 import { CreateDialog } from '../../components/CreateDialog'
 import { createFileNodeThunk } from '../../store/thunks/create'
@@ -60,7 +58,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<
     '' | 'file' | 'folder'
   >('')
-  const [nodeToDelete, setNodeToDelete] = useState<string>()
+  const [nodeToDelete, setNodeToDelete] = useState<FileNode | null>()
   const [nodeToShare, setNodeToShare] = useState<FileNode | null>()
 
   const handleCloseEditDialog = () => {
@@ -71,7 +69,6 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     try {
       if (!detailNode || (detailNode && detailNode.id != nodeId))
         await dispatch(detailFileNodesThunk(nodeId)).unwrap()
-
       setIsFileOpen(true)
     } catch (err) {
       console.log(err)
@@ -87,13 +84,13 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     try {
       if (detailNode && detailNode.id !== nodeId)
         await dispatch(detailFileNodesThunk(nodeId)).unwrap()
-
-      dispatch(
-        checkPermissionForNode({
-          actions: ['OWNER', 'WRITE'],
-          email: user?.email as string,
-        })
-      )
+      if (user && user.role != 'ADMIN')
+        dispatch(
+          checkPermissionForNode({
+            actions: ['OWNER', 'WRITE'],
+            email: user?.email as string,
+          })
+        )
       await dispatch(startEditingNodeFilesThunk(nodeId)).unwrap()
       setIsEditDialogOpen(true)
     } catch (err) {
@@ -109,13 +106,15 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     try {
       if (!detailNode || (detailNode && detailNode.id !== node.id))
         await dispatch(detailFileNodesThunk(node.id)).unwrap()
-      dispatch(
-        checkPermissionForNode({
-          actions: ['OWNER', 'DELETE'],
-          email: user?.email as string,
-        })
-      )
-      setNodeToDelete(node.name)
+
+      if (user && user.role != 'ADMIN')
+        dispatch(
+          checkPermissionForNode({
+            actions: ['OWNER', 'DELETE'],
+            email: user?.email as string,
+          })
+        )
+      setNodeToDelete(node)
     } catch (err) {
       alert("You don't have the permissions to perform this action")
     }
@@ -125,12 +124,13 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       if (!detailNode || (detailNode && detailNode.id !== node.id)) {
         await dispatch(detailFileNodesThunk(node.id)).unwrap()
       }
-      dispatch(
-        checkPermissionForNode({
-          actions: ['OWNER'],
-          email: user?.email as string,
-        })
-      )
+      if (user && user.role != 'ADMIN')
+        dispatch(
+          checkPermissionForNode({
+            actions: ['OWNER'],
+            email: user?.email as string,
+          })
+        )
       setNodeToShare(node)
     } catch (err) {
       alert("You don't have the permissions to perform this action")
@@ -172,12 +172,12 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const handleDeleteNode = async () => {
     try {
       if (!nodeToDelete) return alert('No file/folder to be deleted')
-      await dispatch(deleteFileNodesThunk(nodeToDelete)).unwrap()
+      await dispatch(deleteFileNodesThunk(nodeToDelete.id)).unwrap()
       fetchFileNodes()
     } catch (err) {
       console.log(err)
     } finally {
-      setNodeToDelete(undefined)
+      setNodeToDelete(null)
     }
   }
   const handleShareNode = async (data: SharingOptions) => {
@@ -219,13 +219,14 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   }
   const handleGoToParent = async () => {
     try {
-      if (selectedNode != null) {
+      if (selectedNode && selectedNode.parentId) {
         await dispatch(getFileNodesThunk(selectedNode.parentId)).unwrap()
-        navigate('/folders/' + selectedNode.parentId)
+        return navigate('/folders/' + selectedNode.parentId)
       }
-    } catch (err) {
       navigate('/dashboard')
       dispatch({ type: 'fileNode/resetSelectedNode' })
+    } catch (err) {
+      console.log(err)
     }
   }
 
@@ -244,171 +245,169 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       : []
   useEffect(() => {
     fetchFileNodes()
-    if (!user) dispatch(meThunk())
   }, [params.fileNodeId])
   return (
     <>
-      <Grid container>
-        <Grid item sm={2}>
-          <Link to="/dashboard">
-            <Button>Home</Button>
-          </Link>
-          <Link to="/shared">
-            <Button>Shared with me</Button>
-          </Link>
-        </Grid>
+      <Grid item sm={6} p={2}>
+        <Stack>
+          <Stack direction="row" justifyContent="center" alignItems="center">
+            <Typography sx={{ flexGrow: 1 }}>
+              {selectedNode?.name || 'My Drive'}
+            </Typography>
 
-        <Grid item sm={6} p={2}>
-          <Stack>
-            <Stack direction="row" justifyContent="center" alignItems="center">
-              <Typography sx={{ flexGrow: 1 }}>
-                {selectedNode?.name || 'My Drive'}
-              </Typography>
-
-              <Button
-                disabled={
-                  type == 'get' && !selectedNodePermissions.includes('WRITE')
-                }
-                fullWidth={false}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  openMenu(e.target)
-                }}
-              >
-                <Stack direction="row" spacing={2}>
-                  <Add />
-                  <Typography>New</Typography>
-                </Stack>
-
-                <Menu
-                  onClose={() => {
-                    setIsMenuOpen(false)
-                    setMenuAnchor(null)
-                  }}
-                  anchorEl={menuAnchor}
-                  open={isMenuOpen}
-                  transformOrigin={{
-                    horizontal: 'right',
-                    vertical: 'top',
-                  }}
-                  anchorOrigin={{
-                    horizontal: 'right',
-                    vertical: 'bottom',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MenuItem onClick={() => openCreateDialog('file')}>
-                    File
-                  </MenuItem>
-                  <MenuItem onClick={() => openCreateDialog('folder')}>
-                    Folder
-                  </MenuItem>
-                </Menu>
-              </Button>
-            </Stack>
-            <List sx={{ maxHeight: '80vh', overflow: 'auto' }}>
-              {type == 'get' && (
-                <IconButton onClick={handleGoToParent}>
-                  <ArrowUpward />
-                </IconButton>
-              )}
-              {nodeList?.length > 0 &&
-                nodeList.map((node) => (
-                  <ListItem onClick={() => handleNavigate(node)}>
-                    <ListItemButton>
-                      <ListItemIcon>
-                        {node.isFolder ? <FolderIcon /> : <FileIcon />}
-                      </ListItemIcon>
-                      <ListItemText sx={{ flexGrow: 1 }}>
-                        {node.name}
-                      </ListItemText>
-
-                      <ListItemIcon></ListItemIcon>
-                      <ListItemIcon>
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openFile(node.id)
-                          }}
-                        >
-                          <InfoIcon />
-                        </IconButton>
-                      </ListItemIcon>
-                      <ListItemIcon>
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openShareDialog(node)
-                          }}
-                        >
-                          <Share />
-                        </IconButton>
-                      </ListItemIcon>
-                      <ListItemIcon>
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openDeleteDialog(node)
-                          }}
-                        >
-                          <Delete />
-                        </IconButton>
-                      </ListItemIcon>
-                    </ListItemButton>
-                  </ListItem>
-                ))}
-            </List>
-          </Stack>
-        </Grid>
-        <Grid item sm={4} p={2}>
-          {isFileOpen && detailNode != null && (
-            <Stack sx={{ width: '100%' }} spacing={2}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                  {detailNode.name}
-                </Typography>
-
-                <IconButton
-                  disabled={!hasPermissionToEditDetailNode}
-                  onClick={(e: { stopPropagation: () => void }) => {
-                    openEditDialog(detailNode.id)
-                    e.stopPropagation()
-                  }}
-                >
-                  <EditIcon />
-                </IconButton>
-                <EditDialog
-                  open={isEditDialogOpen}
-                  handleClose={handleCloseEditDialog}
-                  handleSubmit={handleEditNode}
-                />
-                <IconButton onClick={() => setIsFileOpen(false)}>
-                  <CloseIcon />
-                </IconButton>
+            <Button
+              disabled={
+                type == 'get' &&
+                !!user &&
+                user.role != 'ADMIN' &&
+                !selectedNodePermissions.includes('WRITE')
+              }
+              fullWidth={false}
+              onClick={(e) => {
+                e.stopPropagation()
+                openMenu(e.target)
+              }}
+            >
+              <Stack direction="row" spacing={2}>
+                <Add />
+                <Typography>New</Typography>
               </Stack>
 
-              <FormLabel>Owner</FormLabel>
-              <Typography>{detailNode?.owner?.name}</Typography>
-              <Typography>{detailNode?.owner?.email}</Typography>
-              <FormLabel>Permissions</FormLabel>
-              <Typography>
-                {listPermissions(
-                  detailNode?.permissions as Permission[],
-                  user?.email as string
-                ).join(', ')}
-              </Typography>
-              <>
-                <FormLabel>Content</FormLabel>
-                {detailNode?.content ? (
-                  <Typography>{detailNode?.content}</Typography>
-                ) : (
-                  'EMPTY'
-                )}
-              </>
-            </Stack>
-          )}
-        </Grid>
+              <Menu
+                onClose={() => {
+                  setIsMenuOpen(false)
+                  setMenuAnchor(null)
+                }}
+                anchorEl={menuAnchor}
+                open={isMenuOpen}
+                transformOrigin={{
+                  horizontal: 'right',
+                  vertical: 'top',
+                }}
+                anchorOrigin={{
+                  horizontal: 'right',
+                  vertical: 'bottom',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MenuItem onClick={() => openCreateDialog('file')}>
+                  File
+                </MenuItem>
+                <MenuItem onClick={() => openCreateDialog('folder')}>
+                  Folder
+                </MenuItem>
+              </Menu>
+            </Button>
+          </Stack>
+          <List sx={{ maxHeight: '80vh', overflow: 'auto' }}>
+            {type == 'get' && (
+              <IconButton onClick={handleGoToParent}>
+                <ArrowUpward />
+              </IconButton>
+            )}
+            {nodeList?.length > 0 &&
+              nodeList.map((node) => (
+                <ListItem onClick={() => handleNavigate(node)}>
+                  <ListItemButton>
+                    <ListItemIcon>
+                      {node.isFolder ? <FolderIcon /> : <FileIcon />}
+                    </ListItemIcon>
+                    <ListItemText sx={{ flexGrow: 1 }}>
+                      {node.name}
+                    </ListItemText>
+
+                    <ListItemIcon></ListItemIcon>
+                    <ListItemIcon>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openFile(node.id)
+                        }}
+                      >
+                        <InfoIcon />
+                      </IconButton>
+                    </ListItemIcon>
+                    <ListItemIcon>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openShareDialog(node)
+                        }}
+                      >
+                        <Share />
+                      </IconButton>
+                    </ListItemIcon>
+                    <ListItemIcon>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openDeleteDialog(node)
+                        }}
+                      >
+                        <Delete />
+                      </IconButton>
+                    </ListItemIcon>
+                  </ListItemButton>
+                </ListItem>
+              ))}
+          </List>
+        </Stack>
       </Grid>
+      <Grid item sm={4} p={2}>
+        {isFileOpen && detailNode != null && (
+          <Stack sx={{ width: '100%' }} spacing={2}>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                {detailNode.name}
+              </Typography>
+
+              <IconButton
+                disabled={
+                  !!user &&
+                  user.role != 'ADMIN' &&
+                  !hasPermissionToEditDetailNode
+                }
+                onClick={(e: { stopPropagation: () => void }) => {
+                  openEditDialog(detailNode.id)
+                  e.stopPropagation()
+                }}
+              >
+                <EditIcon />
+              </IconButton>
+              <EditDialog
+                open={isEditDialogOpen}
+                handleClose={handleCloseEditDialog}
+                handleSubmit={handleEditNode}
+              />
+              <IconButton onClick={() => setIsFileOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Stack>
+
+            <FormLabel>Owner</FormLabel>
+            <Typography>{detailNode?.owner?.name}</Typography>
+            <Typography>{detailNode?.owner?.email}</Typography>
+            <FormLabel>Permissions</FormLabel>
+            <Typography>
+              {!!user && user.role == 'ADMIN'
+                ? 'ADMIN'
+                : listPermissions(
+                    detailNode?.permissions as Permission[],
+                    user?.email as string
+                  ).join(', ')}
+            </Typography>
+            <>
+              <FormLabel>Content</FormLabel>
+              {detailNode?.content ? (
+                <Typography>{detailNode?.content}</Typography>
+              ) : (
+                'EMPTY'
+              )}
+            </>
+          </Stack>
+        )}
+      </Grid>
+
       <CreateDialog
         handleClose={() => {
           setIsCreateDialogOpen('')
@@ -418,9 +417,9 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       />
       <DeleteDialog
         open={Boolean(nodeToDelete)}
-        name={nodeToDelete}
+        name={nodeToDelete ? nodeToDelete.name : ''}
         handleClose={() => {
-          setNodeToDelete(undefined)
+          setNodeToDelete(null)
         }}
         handleSubmit={handleDeleteNode}
       />

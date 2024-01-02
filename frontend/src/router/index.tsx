@@ -3,6 +3,8 @@ import { Login } from '@/modules/auth/views/Login'
 import { AuthLayout } from '@/modules/auth/layouts/Auth'
 import { SignUp } from '@/modules/auth/views/SignUp'
 import { filesRoutes } from '@/modules/files/routes'
+import { RouteProtector } from '@/componentes/RouteProtector'
+import { usersRoutes } from '@/modules/users/routes'
 
 export const router = createBrowserRouter([
   {
@@ -21,5 +23,9 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  ...filesRoutes,
+  {
+    path: '/',
+    element: <RouteProtector />,
+    children: [...filesRoutes, ...usersRoutes],
+  },
 ])
