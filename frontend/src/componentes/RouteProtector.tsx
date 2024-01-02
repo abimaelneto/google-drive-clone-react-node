@@ -1,3 +1,4 @@
+import { MainLayout } from '@/layouts/Main'
 import { meThunk } from '@/modules/auth/store/thunks/me'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { useEffect } from 'react'
@@ -16,5 +17,13 @@ export const RouteProtector = () => {
     setupUser()
   }, [])
 
-  return <>{user && <Outlet />}</>
+  return (
+    <>
+      {user && (
+        <MainLayout>
+          <Outlet />
+        </MainLayout>
+      )}
+    </>
+  )
 }
