@@ -5,6 +5,8 @@ import { listFileNodesThunk } from './thunks/list'
 import { getFileNodesThunk } from './thunks/get'
 import { detailFileNodesThunk } from './thunks/detail'
 import { startEditingNodeFilesThunk } from './thunks/startEdit'
+import { Action } from '../types/permissions'
+import { listPermissions } from '../utils/listPermissions'
 
 type FileNodesState = {
   nodes: FileNode[]
@@ -26,6 +28,20 @@ export const fileNodesSlice = createSlice({
   reducers: {
     resetSelectedNode(state) {
       state.selectedNode = null
+    },
+    checkPermissionForNode(
+      state,
+      action: PayloadAction<{ action: Action | 'OWNER'; email: string }>
+    ) {
+      console.log(action)
+      if (
+        !listPermissions(
+          state.detailNode?.permissions,
+          action.payload.email
+        ).includes(action.payload.action)
+      ) {
+        throw new Error('Unauthorized')
+      }
     },
   },
   extraReducers(builder) {
@@ -71,3 +87,5 @@ export const fileNodesSlice = createSlice({
 })
 
 export const fileNodesReducer = fileNodesSlice.reducer
+
+export const { checkPermissionForNode } = fileNodesSlice.actions
