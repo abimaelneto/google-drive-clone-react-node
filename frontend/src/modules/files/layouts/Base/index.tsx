@@ -58,7 +58,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<
     '' | 'file' | 'folder'
   >('')
-  const [nodeToDelete, setNodeToDelete] = useState<string>()
+  const [nodeToDelete, setNodeToDelete] = useState<FileNode | null>()
   const [nodeToShare, setNodeToShare] = useState<FileNode | null>()
 
   const handleCloseEditDialog = () => {
@@ -84,13 +84,13 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     try {
       if (detailNode && detailNode.id !== nodeId)
         await dispatch(detailFileNodesThunk(nodeId)).unwrap()
-
-      dispatch(
-        checkPermissionForNode({
-          actions: ['OWNER', 'WRITE'],
-          email: user?.email as string,
-        })
-      )
+      if (user && user.role != 'ADMIN')
+        dispatch(
+          checkPermissionForNode({
+            actions: ['OWNER', 'WRITE'],
+            email: user?.email as string,
+          })
+        )
       await dispatch(startEditingNodeFilesThunk(nodeId)).unwrap()
       setIsEditDialogOpen(true)
     } catch (err) {
@@ -106,13 +106,15 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     try {
       if (!detailNode || (detailNode && detailNode.id !== node.id))
         await dispatch(detailFileNodesThunk(node.id)).unwrap()
-      dispatch(
-        checkPermissionForNode({
-          actions: ['OWNER', 'DELETE'],
-          email: user?.email as string,
-        })
-      )
-      setNodeToDelete(node.name)
+
+      if (user && user.role != 'ADMIN')
+        dispatch(
+          checkPermissionForNode({
+            actions: ['OWNER', 'DELETE'],
+            email: user?.email as string,
+          })
+        )
+      setNodeToDelete(node)
     } catch (err) {
       alert("You don't have the permissions to perform this action")
     }
@@ -122,12 +124,13 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       if (!detailNode || (detailNode && detailNode.id !== node.id)) {
         await dispatch(detailFileNodesThunk(node.id)).unwrap()
       }
-      dispatch(
-        checkPermissionForNode({
-          actions: ['OWNER'],
-          email: user?.email as string,
-        })
-      )
+      if (user && user.role != 'ADMIN')
+        dispatch(
+          checkPermissionForNode({
+            actions: ['OWNER'],
+            email: user?.email as string,
+          })
+        )
       setNodeToShare(node)
     } catch (err) {
       alert("You don't have the permissions to perform this action")
@@ -169,12 +172,12 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const handleDeleteNode = async () => {
     try {
       if (!nodeToDelete) return alert('No file/folder to be deleted')
-      await dispatch(deleteFileNodesThunk(nodeToDelete)).unwrap()
+      await dispatch(deleteFileNodesThunk(nodeToDelete.id)).unwrap()
       fetchFileNodes()
     } catch (err) {
       console.log(err)
     } finally {
-      setNodeToDelete(undefined)
+      setNodeToDelete(null)
     }
   }
   const handleShareNode = async (data: SharingOptions) => {
@@ -216,13 +219,14 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   }
   const handleGoToParent = async () => {
     try {
-      if (selectedNode != null) {
+      if (selectedNode && selectedNode.parentId) {
         await dispatch(getFileNodesThunk(selectedNode.parentId)).unwrap()
-        navigate('/folders/' + selectedNode.parentId)
+        return navigate('/folders/' + selectedNode.parentId)
       }
-    } catch (err) {
       navigate('/dashboard')
       dispatch({ type: 'fileNode/resetSelectedNode' })
+    } catch (err) {
+      console.log(err)
     }
   }
 
@@ -253,7 +257,10 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
 
             <Button
               disabled={
-                type == 'get' && !selectedNodePermissions.includes('WRITE')
+                type == 'get' &&
+                !!user &&
+                user.role != 'ADMIN' &&
+                !selectedNodePermissions.includes('WRITE')
               }
               fullWidth={false}
               onClick={(e) => {
@@ -355,7 +362,11 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
               </Typography>
 
               <IconButton
-                disabled={!hasPermissionToEditDetailNode}
+                disabled={
+                  !!user &&
+                  user.role != 'ADMIN' &&
+                  !hasPermissionToEditDetailNode
+                }
                 onClick={(e: { stopPropagation: () => void }) => {
                   openEditDialog(detailNode.id)
                   e.stopPropagation()
@@ -378,10 +389,12 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
             <Typography>{detailNode?.owner?.email}</Typography>
             <FormLabel>Permissions</FormLabel>
             <Typography>
-              {listPermissions(
-                detailNode?.permissions as Permission[],
-                user?.email as string
-              ).join(', ')}
+              {!!user && user.role == 'ADMIN'
+                ? 'ADMIN'
+                : listPermissions(
+                    detailNode?.permissions as Permission[],
+                    user?.email as string
+                  ).join(', ')}
             </Typography>
             <>
               <FormLabel>Content</FormLabel>
@@ -404,9 +417,9 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       />
       <DeleteDialog
         open={Boolean(nodeToDelete)}
-        name={nodeToDelete}
+        name={nodeToDelete ? nodeToDelete.name : ''}
         handleClose={() => {
-          setNodeToDelete(undefined)
+          setNodeToDelete(null)
         }}
         handleSubmit={handleDeleteNode}
       />

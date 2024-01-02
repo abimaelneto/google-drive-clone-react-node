@@ -14,7 +14,8 @@ export const detailFileNodesThunk = createAsyncThunk(
     const globalState = thunkAPI.getState() as RootState
     if (
       (res instanceof AxiosError && res.response?.status == 403) ||
-      (res.data?.permissions &&
+      ((globalState.auth.user as User).role != 'ADMIN' &&
+        res.data?.permissions &&
         !isOwner(
           res.data?.permissions,
           (globalState.auth.user as User).email
