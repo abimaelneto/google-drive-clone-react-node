@@ -1,4 +1,5 @@
 import { User } from '@/types/user'
+import { Permission } from './permissions'
 
 export type FileNode = {
   id: string
@@ -9,5 +10,5 @@ export type FileNode = {
   content?: string
   children?: FileNode[]
   parentId: string
-  permissions: ('READ' | 'WRITE' | 'DELETE')[]
+  permissions?: Permission[]
 }
