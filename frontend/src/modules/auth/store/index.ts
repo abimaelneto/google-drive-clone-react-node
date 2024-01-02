@@ -1,8 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit'
 import { loginThunk } from './thunks/login'
-import { API } from '@/service/api'
 import { PayloadAction } from '@reduxjs/toolkit/react'
 import { User } from '@/types/user'
+import { meThunk } from './thunks/me'
 
 type AuthState = {
   user: User | null
@@ -29,6 +29,9 @@ export const authSlice = createSlice({
       )
       .addCase(loginThunk.rejected, (state) => {
         state.user = null
+      })
+      .addCase(meThunk.fulfilled, (state, action: PayloadAction<User>) => {
+        state.user = action.payload
       })
   },
 })

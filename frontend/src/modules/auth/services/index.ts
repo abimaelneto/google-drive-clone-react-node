@@ -13,6 +13,9 @@ export class AuthService {
     email: string
     password: string
   }) {
-    return await API.public.post('/signup', { name, email, password })
+    return await API.public.post('/auth/signup', { name, email, password })
+  }
+  static async me() {
+    return await API.private.get('/auth/me')
   }
 }

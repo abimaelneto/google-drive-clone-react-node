@@ -16,7 +16,7 @@ import {
 import { useLocation, Link, useNavigate, useParams } from 'react-router-dom'
 import FolderIcon from '@mui/icons-material/Folder'
 import FileIcon from '@mui/icons-material/Description'
-import EyeIcon from '@mui/icons-material/Visibility'
+import InfoIcon from '@mui/icons-material/InfoOutlined'
 import MenuDotsIcon from '@mui/icons-material/MoreVert'
 import EditIcon from '@mui/icons-material/Edit'
 
@@ -30,12 +30,18 @@ import { FileNode } from '../../types/fileNode'
 import { editFileNodesThunk } from '../../store/thunks/edit'
 import { getFileNodesThunk } from '../../store/thunks/get'
 import { listFileNodesThunk } from '../../store/thunks/list'
+import { hasPermission } from '../../utils/hasPermission'
+import { Permission } from '../../types/permissions'
+import { isOwner } from '../../utils/isOwner'
+import { listPermissions } from '../../utils/listPermissions'
+import { meThunk } from '@/modules/auth/store/thunks/me'
 
 export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const params = useParams()
   const location = useLocation()
+  const { user } = useAppSelector((s) => s.auth)
   const { nodes, selectedNode, detailNode, nodeToBeEdited } = useAppSelector(
     (s) => s.fileNodes
   )
@@ -51,13 +57,12 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
   const openFile = async (nodeId: string) => {
     try {
-      await dispatch(detailFileNodesThunk(nodeId)).unwrap()
+      if (!detailNode || (detailNode && detailNode.id != nodeId))
+        await dispatch(detailFileNodesThunk(nodeId)).unwrap()
 
-      if (detailNode && !detailNode.permissions.includes('READ'))
-        throw new Error('Unauthorized')
       setIsFileOpen(true)
-      dispatch(detailFileNodesThunk(nodeId))
     } catch (err) {
+      console.log(err)
       alert("You don't have the permissions to perform this action")
     }
   }
@@ -70,10 +75,10 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
 
   const openEditDialog = async (nodeId: string) => {
     try {
-      await dispatch(detailFileNodesThunk(nodeId)).unwrap()
+      if (detailNode && detailNode.id !== nodeId)
+        await dispatch(detailFileNodesThunk(nodeId)).unwrap()
 
-      if (detailNode && !detailNode.permissions.includes('WRITE'))
-        throw new Error('Unauthorized')
+      if (!hasPermissionToEditDetailNode) throw new Error('Unauthorized')
       await dispatch(startEditingNodeFilesThunk(nodeId)).unwrap()
       setIsEditDialogOpen(true)
     } catch (err) {
@@ -130,8 +135,15 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       navigate('/dashboard')
     }
   }
+
+  const hasPermissionToEditDetailNode =
+    detailNode &&
+    detailNode?.permissions &&
+    (isOwner(detailNode?.permissions, user?.email as string) ||
+      hasPermission(detailNode?.permissions, 'WRITE'))
   useEffect(() => {
     fetchFileNodes()
+    if (!user) dispatch(meThunk())
   }, [params.fileNodeId])
   return (
     <Grid container>
@@ -196,7 +208,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
                           openFile(node.id)
                         }}
                       >
-                        <EyeIcon />
+                        <InfoIcon />
                       </IconButton>
                     </ListItemIcon>
                   </ListItemButton>
@@ -209,9 +221,10 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
         {isFileOpen && detailNode != null && (
           <Stack sx={{ width: '100%' }} spacing={2}>
             <Stack direction="row" justifyContent="space-between">
-              <Typography variant="h6">Detail</Typography>
+              <Typography variant="h6">{detailNode.name}</Typography>
 
               <IconButton
+                disabled={!hasPermissionToEditDetailNode}
                 onClick={(e: { stopPropagation: () => void }) => {
                   openEditDialog(detailNode.id)
                   e.stopPropagation()
@@ -228,12 +241,17 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
                 <CloseIcon />
               </IconButton>
             </Stack>
-            <FormLabel>Name</FormLabel>
-            <Typography>{detailNode?.name}</Typography>
+
             <FormLabel>Owner</FormLabel>
             <Typography>{detailNode?.owner?.name}</Typography>
             <Typography>{detailNode?.owner?.email}</Typography>
-
+            <FormLabel>Permissions</FormLabel>
+            <Typography>
+              {listPermissions(
+                detailNode?.permissions as Permission[],
+                user?.email as string
+              ).join(', ')}
+            </Typography>
             {detailNode?.content && (
               <>
                 <FormLabel>Content</FormLabel>
