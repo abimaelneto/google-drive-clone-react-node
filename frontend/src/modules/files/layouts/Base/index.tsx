@@ -88,7 +88,12 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       if (detailNode && detailNode.id !== nodeId)
         await dispatch(detailFileNodesThunk(nodeId)).unwrap()
 
-      if (!hasPermissionToEditDetailNode) throw new Error('Unauthorized')
+      dispatch(
+        checkPermissionForNode({
+          actions: ['OWNER', 'WRITE'],
+          email: user?.email as string,
+        })
+      )
       await dispatch(startEditingNodeFilesThunk(nodeId)).unwrap()
       setIsEditDialogOpen(true)
     } catch (err) {
@@ -104,8 +109,12 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     try {
       if (!detailNode || (detailNode && detailNode.id !== node.id))
         await dispatch(detailFileNodesThunk(node.id)).unwrap()
-      if (!detailNodePermissions.find((p) => ['DELETE', 'OWNER'].includes(p)))
-        throw new Error('Unauthorized')
+      dispatch(
+        checkPermissionForNode({
+          actions: ['OWNER', 'DELETE'],
+          email: user?.email as string,
+        })
+      )
       setNodeToDelete(node.name)
     } catch (err) {
       alert("You don't have the permissions to perform this action")
@@ -116,14 +125,12 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
       if (!detailNode || (detailNode && detailNode.id !== node.id)) {
         await dispatch(detailFileNodesThunk(node.id)).unwrap()
       }
-
       dispatch(
         checkPermissionForNode({
-          action: 'OWNER',
+          actions: ['OWNER'],
           email: user?.email as string,
         })
       )
-
       setNodeToShare(node)
     } catch (err) {
       alert("You don't have the permissions to perform this action")

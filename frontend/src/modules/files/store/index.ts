@@ -31,17 +31,16 @@ export const fileNodesSlice = createSlice({
     },
     checkPermissionForNode(
       state,
-      action: PayloadAction<{ action: Action | 'OWNER'; email: string }>
+      action: PayloadAction<{ actions: (Action | 'OWNER')[]; email: string }>
     ) {
-      console.log(action)
-      if (
-        !listPermissions(
-          state.detailNode?.permissions,
-          action.payload.email
-        ).includes(action.payload.action)
-      ) {
-        throw new Error('Unauthorized')
-      }
+      const permissions = listPermissions(
+        state.detailNode?.permissions,
+        action.payload.email
+      )
+
+      action.payload.actions.forEach((p) => {
+        if (!permissions.includes(p)) throw new Error('Unauthorized')
+      })
     },
   },
   extraReducers(builder) {
