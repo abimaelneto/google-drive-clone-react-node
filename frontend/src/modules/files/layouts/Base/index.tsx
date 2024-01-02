@@ -51,9 +51,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
   const handleCloseEditDialog = () => {
     setIsEditDialogOpen(false)
   }
-  const [selectedNodeForActions, setSelectedNodeForActions] = useState<
-    string | null
-  >(null)
+
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
   const openFile = async (nodeId: string) => {
     try {
@@ -221,7 +219,9 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
         {isFileOpen && detailNode != null && (
           <Stack sx={{ width: '100%' }} spacing={2}>
             <Stack direction="row" justifyContent="space-between">
-              <Typography variant="h6">{detailNode.name}</Typography>
+              <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                {detailNode.name}
+              </Typography>
 
               <IconButton
                 disabled={!hasPermissionToEditDetailNode}
