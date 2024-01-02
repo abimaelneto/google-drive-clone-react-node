@@ -23,7 +23,11 @@ const initialState: FileNodesState = {
 export const fileNodesSlice = createSlice({
   name: 'fileNodes',
   initialState,
-  reducers: {},
+  reducers: {
+    resetSelectedNode(state) {
+      state.selectedNode = null
+    },
+  },
   extraReducers(builder) {
     builder.addCase(listFileNodesThunk.pending, (state) => {
       state.nodes = []
