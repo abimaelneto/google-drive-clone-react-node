@@ -3,15 +3,20 @@ import { Link, useNavigate } from 'react-router-dom'
 import { AuthView } from '../../components/AuthView'
 import { useAppDispatch } from '../../../../store/hooks'
 import { loginThunk } from '@/modules/auth/store/thunks/login'
-import { useState } from 'react'
+import { FormEvent, useState } from 'react'
 
 export const Login = () => {
   const [data, setData] = useState({
-    email: 'admin@admin.com',
-    password: 'password',
+    email: '',
+    password: '',
   })
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+
+  const handleChange = (e: FormEvent) => {
+    const { name, value } = e.target as HTMLInputElement
+    setData((old) => ({ ...old, [name]: value }))
+  }
 
   const handleSubmit = async () => {
     try {
@@ -29,8 +34,18 @@ export const Login = () => {
     <AuthView
       form={
         <>
-          <TextField name="email" type="email" />
-          <TextField name="password" type="password" />
+          <TextField
+            onInput={handleChange}
+            value={data.email}
+            name="email"
+            type="email"
+          />
+          <TextField
+            onInput={handleChange}
+            value={data.password}
+            name="password"
+            type="password"
+          />
         </>
       }
       actions={

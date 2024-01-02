@@ -3,10 +3,12 @@ import { FilesService } from './service'
 import { catchAsync } from '../../utils/catchAsync'
 import AppError from '../../utils/AppError'
 import { UsersService } from '../users/service'
-import { Prisma } from '@prisma/client'
+import { Action, Permission, Prisma } from '@prisma/client'
 import { PermissionsService } from '../permissions/service'
 import { PrismaService } from '../../base/PrismaService'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
+import { PermissionCheckResult } from '../permissions/types/PermissionCheckResults'
+import { isOwner } from '../permissions/utils/isOwner'
 
 export class FilesController {
   constructor(
@@ -29,20 +31,30 @@ export class FilesController {
                 { permissions: { some: { userEmail: req.user.email } } },
               ],
             },
-      select: { id: true, name: true, isFolder: true },
+      select: {
+        id: true,
+        name: true,
+        isFolder: true,
+        permissions: { select: { actions: true } },
+      },
     })
+
     return res.status(200).json(fileNodes)
   })
 
   get = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const { nodeId } = req.params
+    let permissions: PermissionCheckResult[] = []
     if (req.user.role != 'ADMIN') {
-      const permissions = await this.permissionsService.getPermissionsForNode(
+      permissions = await this.permissionsService.listPermissionsForNode(
         nodeId,
-        req.user.email,
-        'READ'
+        req.user.email
       )
-      if (!permissions.length)
+      console.log(permissions, isOwner(permissions, req.user.email))
+      if (
+        !isOwner(permissions, req.user.email) &&
+        !permissions.find((i) => i.actions?.includes('READ'))
+      )
         return next(
           //eslint-disable-next-line quotes
           new AppError("You don't have permission to perform this action", 403)
@@ -71,7 +83,7 @@ export class FilesController {
         },
       })
 
-      return res.status(200).json(node)
+      return res.status(200).json({ ...node, permissions })
     } catch (err) {
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
