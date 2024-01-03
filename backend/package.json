@@ -4,9 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "setup": "prisma migrate dev && prisma generate && prisma db seed",
-    "dev": " nodemon",
+    "setup:dev": "prisma migrate dev && prisma generate && prisma db seed",
+    "setup": "prisma migrate dev && prisma generate",
+    "dev": "prisma migrate dev && prisma generate && nodemon",
     "debug": "ndb",
+    "start":"node dist/index.js",
     "build": "tsc",
     "lint:fix": "eslint --fix ./**/*.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
