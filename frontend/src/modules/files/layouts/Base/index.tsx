@@ -13,7 +13,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
-import { useLocation, Link, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import FolderIcon from '@mui/icons-material/Folder'
 import FileIcon from '@mui/icons-material/Description'
 import InfoIcon from '@mui/icons-material/InfoOutlined'
@@ -235,10 +235,7 @@ export const BaseLayout = ({ type }: { type: 'list' | 'get' }) => {
     detailNode?.permissions &&
     (isOwner(detailNode?.permissions, user?.email as string) ||
       hasPermission(detailNode?.permissions, 'WRITE'))
-  const detailNodePermissions =
-    detailNode?.permissions && user
-      ? listPermissions(detailNode?.permissions, user?.email)
-      : []
+
   const selectedNodePermissions =
     selectedNode?.permissions && user
       ? listPermissions(selectedNode?.permissions, user?.email)

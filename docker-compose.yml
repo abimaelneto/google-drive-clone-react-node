@@ -1,0 +1,44 @@
+version: '3.9'
+services:
+  front-web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - 8000:80
+
+    depends_on:
+      - backend-web
+
+  backend-web:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env.production
+
+    ports:
+      - 3000:3000
+
+    networks:
+      - default
+    restart: always
+
+  pgAdmin:
+    volumes:
+      - pg-admin-data:/var/lib/pgadmin/data
+    ports:
+      - 5000:80
+    image: 'dpage/pgadmin4:latest'
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+
+networks:
+  default:
+    name: local-test-network
+    driver: bridge
+
+volumes:
+  db-data:
+  pg-admin-data:

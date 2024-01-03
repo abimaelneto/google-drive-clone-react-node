@@ -10,7 +10,7 @@ provider:
 
 functions:
   app:
-    handler: dist/index.handler
+    handler: dist/src/index.handler
     events:
       - http: ANY /
       - http: ANY /{proxy+}
