@@ -1,0 +1,75 @@
+version: '3.9'
+services:
+  front-web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      - PORT=8000
+    ports:
+      - 8000:8000
+    volumes:
+      - ./frontend:/home/node/app
+    depends_on:
+      - backend-web
+
+  backend-web:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+      args:
+        - DB_URL=postgresql://admin:admin@postgres:5432/google-drive-clone?schema=public&connect_timeout=3000
+    environment:
+      - PORT=3000
+      - JWT_SECRET=abimael
+      - JWT_EXPIRES_IN=2d
+      - JWT_COOKIE_EXPIRES_IN=2
+      - DB_URL=postgresql://admin:admin@postgres:5432/google-drive-clone?schema=public&connect_timeout=300
+      - DB_PORT=5432
+      - DB_PASS=admin
+      - DB_USER=admin
+    ports:
+      - 3000:3000
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+      - ./backend/@types:/app/@types
+    depends_on:
+      - postgres
+    networks:
+      - default
+    restart: always
+  postgres:
+    container_name: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    image: 'postgres:15.3-alpine'
+    environment:
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_USER=admin
+      - POSTGRES_DB=google-drive-clone
+    restart: always
+    networks:
+      - default
+  pgAdmin:
+    volumes:
+      - pg-admin-data:/var/lib/pgadmin/data
+    ports:
+      - 5000:80
+    image: 'dpage/pgadmin4:latest'
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    depends_on:
+      - postgres
+
+networks:
+  default:
+    name: local-test-network
+    driver: bridge
+
+volumes:
+  db-data:
+  pg-admin-data:
