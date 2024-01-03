@@ -26,6 +26,8 @@ jobs:
 
       - name: Apply pending migrations
         run: npx prisma migrate deploy
+        env:
+          DB_URL: ${{secrets.DB_URL}}
 
       - name: Deploy
         uses: serverless/github-action@v3.2
