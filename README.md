@@ -31,10 +31,16 @@ Na raiz do projeto rode o comando para inicializar front, back e banco locais:
 docker compose -f docker-compose-dev.yml up -d
 ```
 
-Esse comando já vai rodar o comando de setup da base, com migrações e seed. Sor for necessário executar novamente, no container backend rode:
+Após isso, rode o comando para encontrar os containers ativos:
 
 ```
-npm run setup:dev
+docker ps
+```
+
+Use o id do container do backend para rodar os comandos de migrações e seed:
+
+```
+docker exec -it <CONTAINER_ID> npm run setup:dev
 ```
 
 Acesse o front end em localhost:8000 e teste o back em localhost:3000
