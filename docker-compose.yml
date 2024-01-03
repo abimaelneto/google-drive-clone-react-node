@@ -8,8 +8,7 @@ services:
       - PORT=8000
     ports:
       - 8000:8000
-    volumes:
-      - ./frontend:/home/node/app
+
     depends_on:
       - backend-web
 
@@ -22,10 +21,7 @@ services:
 
     ports:
       - 3000:3000
-    volumes:
-      - ./backend/src:/app/src
-      - ./backend/prisma:/app/prisma
-      - ./backend/@types:/app/@types
+
     networks:
       - default
     restart: always
