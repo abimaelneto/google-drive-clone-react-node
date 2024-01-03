@@ -28,6 +28,7 @@ services:
       - DB_PORT=5432
       - DB_PASS=admin
       - DB_USER=admin
+      - CLIENT_URL=http://localhost:8000
     ports:
       - 3000:3000
     volumes:
