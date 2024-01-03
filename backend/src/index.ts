@@ -7,13 +7,14 @@ import { AuthRouter } from './modules/auth/router'
 import { GlobalErrorHandler } from './utils/GlobalErrorHandler'
 import { usersRouter } from './modules/users/router'
 import { filesRouter } from './modules/file-nodes/router'
+import { PrismaService } from './base/PrismaService'
 
 const app: Express = express()
 const port = process.env.PORT
 app.use(
   cors({
     credentials: true,
-    origin: 'http://localhost:8000',
+    origin: process.env.CLIENT_URL,
   })
 )
 app.use(json())
@@ -33,4 +34,9 @@ app.listen(port, () => {
   console.log(`Example app listening on port  ${port}`)
 })
 
+process.on('uncaughtException', async (err) => {
+  console.log(err)
+  await PrismaService.$disconnect()
+  process.exit(1)
+})
 export const handler = serverless(app)
